@@ -1,0 +1,7 @@
+__title__ = "matting"
+__version__ = "0.0.1"
+__author__ = "todo"
+__email__ = "todo0@todo.com"
+__license__ = "For academic use only."
+__uri__ = "https://github.com/99991/matting"
+__summary__ = "Python package for alpha matting."
