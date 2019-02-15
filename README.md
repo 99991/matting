@@ -10,7 +10,7 @@ python setup.py install
 
 # Example
 
-![image of plant, trimap and plant alpha](https://raw.githubusercontent.com/99991/matting/master/examples/plant_result.png)
+![image of plant, trimap and plant alpha](https://raw.githubusercontent.com/99991/matting/master/examples/plant_result.jpg)
 
 This example and the corresponding images can be found at `examples/plant_example.py`.
 
