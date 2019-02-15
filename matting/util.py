@@ -3,6 +3,10 @@ import PIL.Image
 import numpy as np
 import scipy.sparse
 
+vec_vec_dot   = lambda a,b: np.einsum("...i,...i->...", a, b)
+mat_vec_dot   = lambda A,b: np.einsum("...ij,...j->...i", A, b)
+vec_vec_outer = lambda a,b: np.einsum("...i,...j", a, b)
+
 def load_image(path, mode=None, interpolation=None, width=None, height=None):
     assert(interpolation is not None)
     
@@ -110,7 +114,7 @@ def make_windows(image, radius=1):
             for y in range(2*radius+1)
         ], axis=2)
 
-def make_system(L, trimap, lambd):
+def trimap_split(trimap):
     is_fg = (trimap == 1.0).flatten()
     is_bg = (trimap == 0.0).flatten()
     is_known = is_fg | is_bg
@@ -120,6 +124,11 @@ def make_system(L, trimap, lambd):
         raise ValueError("Trimap did not contain background values (values = 0)")
     if is_bg.sum() == 0:
         raise ValueError("Trimap did not contain foreground values (values = 1)")
+    
+    return is_fg, is_bg, is_known, is_unknown
+
+def make_system(L, trimap, lambd):
+    is_fg, is_bg, is_known, is_unknown = trimap_split(trimap)
     
     d = is_known.astype(np.float64)
     D = scipy.sparse.diags(d)
@@ -140,7 +149,8 @@ def solve_cg(
     max_iter,
     x0=None,
     precondition=None,
-    callback=None
+    callback=None,
+    print_info=False,
 ):
     x = np.zeros(A.shape[0]) if x0 is None else x0.copy()
     
@@ -161,6 +171,11 @@ def solve_cg(
         r -= alpha*Ap
 
         residual_error = np.linalg.norm(r)
+        
+        if print_info:
+            print("iteration %05d - residual error %e"%(
+                iteration,
+                residual_error))
         
         if callback is not None:
             callback(x)

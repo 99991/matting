@@ -2,7 +2,9 @@ from .util import make_system, solve_cg
 from .closed_form_laplacian import closed_form_laplacian
 from .knn_laplacian import knn_laplacian
 from .ichol import ichol, ichol_solve
+from .lkm import make_lkm_operators
 import numpy as np
+import scipy.sparse.linalg
 
 def matting(
     image,
@@ -10,10 +12,12 @@ def matting(
     method,
     ichol_regularization=0.0,
     ichol_threshold=1e-4,
+    lkm_radius=10,
     lambd=100.0,
     epsilon=1e-7,
     max_iter=1000,
     relative_tolerance=1e-8,
+    print_info=False,
 ):
     """
     Closed form alpha matting based on:
@@ -26,6 +30,12 @@ def matting(
         Q. Chen, D. Li, C.-K. Tang.
         "KNN Matting."
         Conference on Computer Vision and Pattern Recognition (CVPR), June 2012.
+    
+    Lkm matting based on:
+        He, Kaiming, Jian Sun, and Xiaoou Tang.
+        "Fast matting using large kernel matting laplacian matrices."
+        Computer Vision and Pattern Recognition (CVPR),
+        2010 IEEE Conference on. IEEE, 2010.
     
     Propagates approximate alpha values of trimap into unknown regions
     based on image color.
@@ -58,6 +68,9 @@ def matting(
         decomposition.
         Leads to faster build times and lower memory use,
         but decreases convergence rate and decomposition might fail.
+    lkm_radius: int
+        Radius for matting kernel used in lkm matting.
+        Converges faster with larger radius, but result is more blurry.
     lambd: float64
         Weighting factor to constrain known trimap values.
     epsilon: float64
@@ -65,10 +78,12 @@ def matting(
         Larger values lead to faster convergence but more blurry alpha.
     max_iter: int
         Maximum number of iterations of conjugate gradient descent.
-    relative_tolerance:
+    relative_tolerance: float64
         Conjugate gradient descent will stop when
         norm(A x - b) < relative_tolerance norm(b)
-    
+    print_info: bool
+        If to print convergence information.
+        
     Returns
     -------
     alpha: ndarray, dtype float64, shape [height, width]
@@ -83,7 +98,7 @@ def matting(
     assert(0 <= image.min() and image.max() <= 1)
     assert(0 <= trimap.min() and trimap.max() <= 1)
     
-    methods = ["closed_form", "knn"]
+    methods = ["closed_form", "knn", "lkm"]
     
     if method == "closed_form":
         L = closed_form_laplacian(image, epsilon)
@@ -117,6 +132,32 @@ def matting(
         def precondition(r):
             return r * inv_diag_A
     
+    elif method == "lkm":
+        # TODO make make_system able to handle diagonals
+        L, L_diag = make_lkm_operators(
+            image,
+            radius=lkm_radius,
+            eps=epsilon)
+        
+        from .util import trimap_split
+        is_fg, is_bg, is_known, is_unknown = trimap_split(trimap)
+        
+        d = lambd*is_known.astype(np.float64)
+        
+        inv_A_diag = 1/(L_diag + d)
+        
+        def A_dot(x):
+            return L @ x + d * x
+        
+        n = len(d)
+        
+        A = scipy.sparse.linalg.LinearOperator(matvec=A_dot, shape=(n, n))
+        
+        b = lambd*is_fg.astype(np.float64)
+        
+        def precondition(r):
+            return r * inv_A_diag
+    
     else:
         raise ValueError("Invalid matting method: %s\nValid methods are:\n%s"%(
             method,
@@ -127,7 +168,8 @@ def matting(
         b,
         max_iter=max_iter,
         rtol=relative_tolerance,
-        precondition=precondition)
+        precondition=precondition,
+        print_info=print_info)
     
     alpha = alpha.reshape(trimap.shape)
     
