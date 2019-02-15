@@ -34,6 +34,7 @@ trimap = load_image(trimap_path, "GRAY", "NEAREST" , height=height)
 method = "closed_form"
 # other methods:
 #method = "knn"
+#method = "lkm"
 alpha = matting(image, trimap, method)
 
 # Save alpha
