@@ -68,30 +68,29 @@ for method in [
 
 ## Closed form alpha matting based on
 ```
-    Levin, Anat, Dani Lischinski, and Yair Weiss.
-    "A closed-form solution to natural image matting."
-    IEEE transactions on pattern analysis and machine intelligence
-    30.2 (2008): 228-242.
+Levin, Anat, Dani Lischinski, and Yair Weiss.
+"A closed-form solution to natural image matting."
+IEEE transactions on pattern analysis and machine intelligence 30.2 (2008): 228-242.
 ```
 
 ## Knn matting based on
 ```
-    Q. Chen, D. Li, C.-K. Tang.
-    "KNN Matting."
-    Conference on Computer Vision and Pattern Recognition (CVPR), June 2012.
+Q. Chen, D. Li, C.-K. Tang.
+"KNN Matting."
+Conference on Computer Vision and Pattern Recognition (CVPR), June 2012.
 ```
 
 ## Lkm matting based on
 ```
-    He, Kaiming, Jian Sun, and Xiaoou Tang.
-    "Fast matting using large kernel matting laplacian matrices."
-    Computer Vision and Pattern Recognition (CVPR),
-    2010 IEEE Conference on. IEEE, 2010.
+He, Kaiming, Jian Sun, and Xiaoou Tang.
+"Fast matting using large kernel matting laplacian matrices."
+Computer Vision and Pattern Recognition (CVPR),
+2010 IEEE Conference on. IEEE, 2010.
 ```
 
 ## Ifm matting based on
 ```
-    Aksoy, Yagiz, Tunc Ozan Aydin, and Marc Pollefeys.
-    "Designing effective inter-pixel information flow for natural image matting."
-    Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2017.
+Aksoy, Yagiz, Tunc Ozan Aydin, and Marc Pollefeys.
+"Designing effective inter-pixel information flow for natural image matting."
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2017.
 ```
