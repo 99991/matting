@@ -12,25 +12,35 @@ path = os.path.join(os.path.dirname(__file__), "matting", "__about__.py")
 about = {}
 exec(load_text(path), about)
 
+def cleanup():
+    print("cleanup")
+    os.chdir("matting/c")
+    try:
+        os.remove("libmatting.so")
+    except OSError:
+        pass
+    os.chdir("../..")
+    for directory in [
+        "build",
+        "matting.egg-info",
+    ]:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 class InstallLibmatting(install):
     def run(self):
         print("building libmatting.so")
         os.chdir("matting/c")
-        os.system("make")
+        err = os.system("make")
         os.chdir("../..")
+        
+        if err:
+            cleanup()
+            raise Exception("Failed to compile libmatting")
         
         install.run(self)
         
-        print("cleanup")
-        os.chdir("matting/c")
-        os.remove("libmatting.so")
-        os.chdir("../..")
-        for directory in [
-            "build",
-            "matting.egg-info",
-        ]:
-            shutil.rmtree(directory, ignore_errors=True)
-
+        cleanup()
 setup(
     name=about["__title__"],
     version=about["__version__"],

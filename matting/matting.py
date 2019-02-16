@@ -3,6 +3,7 @@ from .closed_form_laplacian import closed_form_laplacian
 from .knn_laplacian import knn_laplacian
 from .ichol import ichol, ichol_solve
 from .lkm import make_lkm_operators
+from .matting_ifm import ifm_system
 import numpy as np
 import scipy.sparse.linalg
 
@@ -15,27 +16,32 @@ def matting(
     lkm_radius=10,
     lambd=100.0,
     epsilon=1e-7,
-    max_iter=1000,
-    relative_tolerance=1e-8,
+    max_iter=2000,
+    relative_tolerance=1e-6,
     print_info=False,
 ):
     """
-    Closed form alpha matting based on:
+    Closed form (cf) matting based on:
         Levin, Anat, Dani Lischinski, and Yair Weiss.
         "A closed-form solution to natural image matting."
         IEEE transactions on pattern analysis and machine intelligence
         30.2 (2008): 228-242.
     
-    Knn matting based on:
+    K-nearest neighbors (knn) matting based on:
         Q. Chen, D. Li, C.-K. Tang.
         "KNN Matting."
         Conference on Computer Vision and Pattern Recognition (CVPR), June 2012.
     
-    Lkm matting based on:
+    Large kernel matting (lkm) based on:
         He, Kaiming, Jian Sun, and Xiaoou Tang.
         "Fast matting using large kernel matting laplacian matrices."
         Computer Vision and Pattern Recognition (CVPR),
         2010 IEEE Conference on. IEEE, 2010.
+    
+    Information flow matting (ifm) based on:
+        Aksoy, Yagiz, Tunc Ozan Aydin, and Marc Pollefeys.
+        "Designing effective inter-pixel information flow for natural image matting."
+        Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2017.
     
     Propagates approximate alpha values of trimap into unknown regions
     based on image color.
@@ -98,9 +104,9 @@ def matting(
     assert(0 <= image.min() and image.max() <= 1)
     assert(0 <= trimap.min() and trimap.max() <= 1)
     
-    methods = ["closed_form", "knn", "lkm"]
+    methods = ["cf", "knn", "lkm", "ifm"]
     
-    if method == "closed_form":
+    if method == "cf":
         L = closed_form_laplacian(image, epsilon)
         
         A, b = make_system(L, trimap, lambd)
@@ -133,7 +139,6 @@ def matting(
             return r * inv_diag_A
     
     elif method == "lkm":
-        # TODO make make_system able to handle diagonals
         L, L_diag = make_lkm_operators(
             image,
             radius=lkm_radius,
@@ -158,12 +163,17 @@ def matting(
         def precondition(r):
             return r * inv_A_diag
     
+    elif method == "ifm":
+        A,b = ifm_system(image, trimap)
+        
+        def precondition(r):
+            return r
     else:
         raise ValueError("Invalid matting method: %s\nValid methods are:\n%s"%(
             method,
             "\n".join("    " + method for method in methods)))
     
-    alpha, info = solve_cg(
+    x, info = solve_cg(
         A,
         b,
         max_iter=max_iter,
@@ -171,6 +181,6 @@ def matting(
         precondition=precondition,
         print_info=print_info)
     
-    alpha = alpha.reshape(trimap.shape)
+    alpha = np.clip(x, 0, 1).reshape(trimap.shape)
     
     return alpha

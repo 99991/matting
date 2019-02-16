@@ -20,8 +20,13 @@ _knn.argtypes = [
     c_int,
     c_int]
 
-# gcc -fPIC -shared -O3 -Wall -Wextra -pedantic kdtree.c libknn.c -o libknn.so
 def knn(data_points, query_points, k):
+    if data_points.dtype == np.float64:
+        data_points = data_points.astype(np.float32)
+    
+    if query_points.dtype == np.float64:
+        query_points = query_points.astype(np.float32)
+    
     assert(len(data_points.shape) == 2)
     assert(len(query_points.shape) == 2)
     assert(data_points.dtype == np.float32)
