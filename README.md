@@ -28,7 +28,7 @@ blended_path = "out/plant_new_background_method.png"
 os.makedirs("out", exist_ok=True)
 
 # Limit image size to make demo run faster
-height = 512
+height = 128
 
 # Load input images
 image  = load_image( image_path, "RGB" , "BILINEAR", height=height)
