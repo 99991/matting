@@ -4,6 +4,7 @@ from .knn_laplacian import knn_laplacian
 from .ichol import ichol, ichol_solve
 from .lkm import make_lkm_operators
 from .matting_ifm import ifm_system
+from .vcycle import vcycle
 import numpy as np
 import scipy.sparse.linalg
 
@@ -43,6 +44,11 @@ def matting(
         "Designing effective inter-pixel information flow for natural image matting."
         Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2017.
     
+    Vcycle matting based on:
+        Lee, Philip G., and Ying Wu.
+        "Scalable matting: A sub-linear approach."
+        arXiv preprint arXiv:1404.3933 (2014).
+    
     Propagates approximate alpha values of trimap into unknown regions
     based on image color.
     A system of linear equations is assembled and then solved with
@@ -63,8 +69,11 @@ def matting(
             other for unknown.
     method: string
         Possible methods are:
-            "closed_form"
+            "cf"
             "knn"
+            "lkm"
+            "ifm"
+            "vcycle"
     ichol_regularization: float64
         Increase to increase probability that incomplete
         Cholesky decomposition can be built successfully.
@@ -104,7 +113,7 @@ def matting(
     assert(0 <= image.min() and image.max() <= 1)
     assert(0 <= trimap.min() and trimap.max() <= 1)
     
-    methods = ["cf", "knn", "lkm", "ifm"]
+    methods = ["cf", "knn", "lkm", "ifm", "vcycle"]
     
     if method == "cf":
         L = closed_form_laplacian(image, epsilon)
@@ -168,6 +177,17 @@ def matting(
         
         def precondition(r):
             return r
+    
+    elif method == "vcycle":
+        cache = {}
+        
+        L = closed_form_laplacian(image, epsilon)
+        
+        A, b = make_system(L, trimap, lambd)
+
+        def precondition(r):
+            return vcycle(A, r, trimap.shape, cache)
+
     else:
         raise ValueError("Invalid matting method: %s\nValid methods are:\n%s"%(
             method,

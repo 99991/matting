@@ -28,7 +28,7 @@ blended_path = "out/plant_new_background_method.png"
 os.makedirs("out", exist_ok=True)
 
 # Limit image size to make demo run faster
-height = 128
+height = 512
 
 # Load input images
 image  = load_image( image_path, "RGB" , "BILINEAR", height=height)
@@ -48,10 +48,11 @@ for method in [
     "knn",
     "lkm",
     "ifm",
+    "vcycle",
 ]:
     print("Calculating alpha matte with %s method"%method)
     
-    alpha = matting(image, trimap, method)
+    alpha = matting(image, trimap, method, print_info=True)
 
     # Save alpha
     save_image(alpha_path.replace("method", method), alpha)
@@ -93,4 +94,11 @@ Computer Vision and Pattern Recognition (CVPR),
 Aksoy, Yagiz, Tunc Ozan Aydin, and Marc Pollefeys.
 "Designing effective inter-pixel information flow for natural image matting."
 Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2017.
+```
+
+## Vcycle matting based on
+```
+Lee, Philip G., and Ying Wu.
+"Scalable matting: A sub-linear approach."
+arXiv preprint arXiv:1404.3933 (2014).
 ```
