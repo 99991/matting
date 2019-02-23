@@ -1,3 +1,5 @@
+![image of plant, trimap and plant alpha](https://raw.githubusercontent.com/99991/matting/master/examples/plant_result.jpg)
+
 # Install
 
 Currently, only Linux is supported.
@@ -8,9 +10,20 @@ cd matting
 python setup.py install
 ```
 
-# Example
+# Minimal Example
 
-![image of plant, trimap and plant alpha](https://raw.githubusercontent.com/99991/matting/master/examples/plant_result.jpg)
+```python
+from matting import alpha_matting, load_image, save_image
+
+image = load_image("image.png")
+trimap = load_image("trimap.png")
+
+alpha = alpha_matting(image, trimap)
+
+save_image("alpha.png", alpha)
+```
+
+# Extended Example
 
 This example and the corresponding images can be found at `examples/plant_example.py`.
 
@@ -31,7 +44,9 @@ os.makedirs("out", exist_ok=True)
 height = 128
 
 # Load input images
+# shape (height, width, 3) of data type numpy.float64 in range [0, 1]
 image  = load_image( image_path, "RGB" , "BILINEAR", height=height)
+# shape (height, width) of data type numpy.float64 in range [0, 1]
 trimap = load_image(trimap_path, "GRAY", "NEAREST" , height=height)
 
 # Load new background image
@@ -62,7 +77,6 @@ for method in [
 
     # Save image on new background
     save_image(blended_path.replace("method", method), image_on_new_background)
-
 ```
 
 # Citations

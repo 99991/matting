@@ -14,7 +14,9 @@ os.makedirs("out", exist_ok=True)
 height = 128
 
 # Load input images
+# shape (height, width, 3) of data type numpy.float64 in range [0, 1]
 image  = load_image( image_path, "RGB" , "BILINEAR", height=height)
+# shape (height, width) of data type numpy.float64 in range [0, 1]
 trimap = load_image(trimap_path, "GRAY", "NEAREST" , height=height)
 
 # Load new background image
