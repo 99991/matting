@@ -50,16 +50,16 @@ def try_to_compile():
         err = os.system(command)
         
         if err == 0:
-            print('Command "%s" succeeded'%command)
+            print('Command succeeded:\n"%s"'%command)
             return err
         
-        print('Command "%s" failed'%command)
+        print('Command failed (that is ok if a later comand succeeds):\n%s'%command)
     
     return err
 
 class InstallLibmatting(install):
     def run(self):
-        print("building libmatting binary")
+        print("building libmatting library")
         os.chdir("matting/c")
         
         err = try_to_compile()
