@@ -84,7 +84,7 @@ setup(
     long_description_content_type="text/markdown",
     license=about["__license__"],
     packages=find_packages(),
-    package_data={"matting": ["c/libmatting.so"]},
+    package_data={"matting": ["c/libmatting.so", "c/libmatting.dll"]},
     install_requires=load_text("requirements.txt").strip().split("\n"),
     keywords='alpha matting',
     python_requires='>=3',
