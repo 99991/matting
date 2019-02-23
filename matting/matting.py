@@ -3,15 +3,15 @@ from .closed_form_laplacian import closed_form_laplacian
 from .knn_laplacian import knn_laplacian
 from .ichol import ichol, ichol_solve
 from .lkm import make_lkm_operators
-from .matting_ifm import ifm_system
+from .ifm_matting import ifm_system
 from .vcycle import vcycle
 import numpy as np
 import scipy.sparse.linalg
 
-def matting(
+def alpha_matting(
     image,
     trimap,
-    method,
+    method="knn",
     ichol_regularization=0.0,
     ichol_threshold=1e-4,
     lkm_radius=10,

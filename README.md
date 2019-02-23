@@ -15,7 +15,7 @@ python setup.py install
 This example and the corresponding images can be found at `examples/plant_example.py`.
 
 ```python
-from matting import matting, load_image, save_image, blend
+from matting import alpha_matting, load_image, save_image, blend
 import os
 
 # Input paths
@@ -52,7 +52,7 @@ for method in [
 ]:
     print("Calculating alpha matte with %s method"%method)
     
-    alpha = matting(image, trimap, method, print_info=True)
+    alpha = alpha_matting(image, trimap, method, print_info=True)
 
     # Save alpha
     save_image(alpha_path.replace("method", method), alpha)
