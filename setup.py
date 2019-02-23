@@ -3,6 +3,25 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 import shutil
 
+src = """
+
+ichol.c
+knn.c
+kdtree.c
+boxfilter.c
+labelexpand.c
+
+""".replace("\n", " ")
+
+flags = "-O3 -Wall -Wextra -pedantic -shared"
+
+commands = [
+    # Windows
+    "gcc %s %s -o libmatting.dll"%(flags, src),
+    # Linux
+    "gcc %s %s -fPIC -lm -o libmatting.so"%(flags, src),
+]
+
 def load_text(path):
     with open(path) as f:
         return f.read()
@@ -26,12 +45,25 @@ def cleanup():
     ]:
         shutil.rmtree(directory, ignore_errors=True)
 
+def try_to_compile():
+    for command in commands:
+        err = os.system(command)
+        
+        if err == 0:
+            print('Command "%s" succeeded'%command)
+            return err
+        
+        print('Command "%s" failed'%command)
+    
+    return err
 
 class InstallLibmatting(install):
     def run(self):
-        print("building libmatting.so")
+        print("building libmatting binary")
         os.chdir("matting/c")
-        err = os.system("make")
+        
+        err = try_to_compile()
+        
         os.chdir("../..")
         
         if err:
