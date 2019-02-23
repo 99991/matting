@@ -8,8 +8,6 @@ mat_vec_dot   = lambda A,b: np.einsum("...ij,...j->...i", A, b)
 vec_vec_outer = lambda a,b: np.einsum("...i,...j", a, b)
 
 def load_image(path, mode=None, interpolation=None, width=None, height=None):
-    assert(interpolation is not None)
-    
     if interpolation is None:
         interpolation = "BILINEAR"
     
