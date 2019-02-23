@@ -145,6 +145,7 @@ def solve_cg(
     b,
     rtol,
     max_iter,
+    atol=0.0,
     x0=None,
     precondition=None,
     callback=None,
@@ -178,7 +179,7 @@ def solve_cg(
         if callback is not None:
             callback(x)
         
-        if residual_error < rtol*norm_b:
+        if residual_error < atol or residual_error < rtol*norm_b:
             break
 
         z = precondition(r)
@@ -188,4 +189,4 @@ def solve_cg(
         p *= beta
         p += z
 
-    return x, 0
+    return x

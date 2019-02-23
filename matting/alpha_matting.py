@@ -193,7 +193,7 @@ def alpha_matting(
             method,
             "\n".join("    " + method for method in methods)))
     
-    x, info = solve_cg(
+    x = solve_cg(
         A,
         b,
         max_iter=max_iter,
