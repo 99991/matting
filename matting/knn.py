@@ -39,7 +39,7 @@ def knn(data_points, query_points, k):
     assert(data_points_dim == query_points_dim)
     
     indices = np.empty(n_query_points*k, dtype=np.int32)
-    distances = np.empty(n_query_points*k, dtype=np.float32)
+    squared_distances = np.empty(n_query_points*k, dtype=np.float32)
     
     _knn(
         np.ctypeslib.as_ctypes(data_points.flatten()),
