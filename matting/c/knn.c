@@ -1,5 +1,4 @@
 #include "kdtree.h"
-#include <math.h>
 #include <stdlib.h>
 
 // Using int type for sizes instead of size_t due to 32/64-bit issues.
@@ -7,7 +6,7 @@ void knn(
     float *data_points,
     float *query_points,
     int *out_neighbor_indices,
-    float *out_neighbor_distances,
+    float *out_neighbor_squared_distances,
     const int n_data_points,
     const int n_query_points,
     const int point_dimension,
@@ -36,7 +35,7 @@ void knn(
 
         for (size_t j = 0; j < n_neighbors; j++){
             *out_neighbor_indices++ = neighbors[j].index;
-            *out_neighbor_distances++ = sqrt(neighbors[j].distance);
+            *out_neighbor_squared_distances++ = neighbors[j].distance;
         }
     }
 

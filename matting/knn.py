@@ -45,14 +45,14 @@ def knn(data_points, query_points, k):
         np.ctypeslib.as_ctypes(data_points.flatten()),
         np.ctypeslib.as_ctypes(query_points.flatten()),
         np.ctypeslib.as_ctypes(indices),
-        np.ctypeslib.as_ctypes(distances),
+        np.ctypeslib.as_ctypes(squared_distances),
         n_data_points,
         n_query_points,
         data_points_dim,
         k)
     
     indices = indices.reshape(n_query_points, k)
-    distances = distances.reshape(n_query_points, k)
+    squared_distances = squared_distances.reshape(n_query_points, k)
     
     return indices
 
