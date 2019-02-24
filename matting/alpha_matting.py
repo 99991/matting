@@ -132,6 +132,7 @@ def alpha_matting(
                 
                 print("""WARNING: ichol failed (%s).
     Retrying with ichol_regularization = %f.
+    A smaller value for ichol_threshold might help if sufficient memory is available.
     See help of matting_closed_form for more info."""%(e, ichol_regularization))
         
         def precondition(r):
