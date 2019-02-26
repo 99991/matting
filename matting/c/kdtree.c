@@ -159,36 +159,11 @@ static inline float kdtree_cell_distance(
     const float *hi,
     size_t dimension
 ){
-    switch (dimension){
-        // 10% faster for unrolled cases
-        case 1: return
-            kdtree_sq(p[0] - kdtree_clamp(p[0], lo[0], hi[0]));
-        case 2: return
-            kdtree_sq(p[0] - kdtree_clamp(p[0], lo[0], hi[0])) +
-            kdtree_sq(p[1] - kdtree_clamp(p[1], lo[1], hi[1]));
-        case 3: return
-            kdtree_sq(p[0] - kdtree_clamp(p[0], lo[0], hi[0])) +
-            kdtree_sq(p[1] - kdtree_clamp(p[1], lo[1], hi[1])) +
-            kdtree_sq(p[2] - kdtree_clamp(p[2], lo[2], hi[2]));
-        case 4: return
-            kdtree_sq(p[0] - kdtree_clamp(p[0], lo[0], hi[0])) +
-            kdtree_sq(p[1] - kdtree_clamp(p[1], lo[1], hi[1])) +
-            kdtree_sq(p[2] - kdtree_clamp(p[2], lo[2], hi[2])) +
-            kdtree_sq(p[3] - kdtree_clamp(p[3], lo[3], hi[3]));
-        case 5: return
-            kdtree_sq(p[0] - kdtree_clamp(p[0], lo[0], hi[0])) +
-            kdtree_sq(p[1] - kdtree_clamp(p[1], lo[1], hi[1])) +
-            kdtree_sq(p[2] - kdtree_clamp(p[2], lo[2], hi[2])) +
-            kdtree_sq(p[3] - kdtree_clamp(p[3], lo[3], hi[3])) +
-            kdtree_sq(p[4] - kdtree_clamp(p[4], lo[4], hi[4]));
-        default:{
-            float distance = 0.0f;
-            for (size_t d = 0; d < dimension; d++){
-                distance += kdtree_sq(p[d] - kdtree_clamp(p[d], lo[d], hi[d]));
-            }
-            return distance;
-        }
+    float distance = 0.0f;
+    for (size_t d = 0; d < dimension; d++){
+        distance += kdtree_sq(p[d] - kdtree_clamp(p[d], lo[d], hi[d]));
     }
+    return distance;
 }
 
 void kdtree_find_knn(
