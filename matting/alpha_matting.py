@@ -120,20 +120,32 @@ def alpha_matting(
         
         A, b = make_system(L, trimap, lambd)
         
-        while True:
+        params = [
+            (ichol_regularization, ichol_threshold),
+            (1e-4, 1e-4),
+            (0.0, 1e-5),
+            (1e-4, 1e-5),
+            (0.0, 0.0),
+        ]
+        
+        for ichol_regularization, ichol_threshold in params:
             try:
-                L = ichol(A.tocsc(), ichol_threshold)
+                A_regularized = A if ichol_regularization == 0.0 else \
+                    A + ichol_regularization*scipy.sparse.identity(A.shape[0])
+                
+                L = ichol(A_regularized.tocsc(), ichol_threshold)
                 break
             except ValueError as e:
-                if ichol_regularization <= 0:
-                    ichol_regularization = 1e-4
-                else:
-                    ichol_regularization *= 5
-                
-                print("""WARNING: ichol failed (%s).
-    Retrying with ichol_regularization = %f.
-    A smaller value for ichol_threshold might help if sufficient memory is available.
-    See help of matting_closed_form for more info."""%(e, ichol_regularization))
+                print("""WARNING:
+Incomplete Cholesky decomposition failed (%s) with:
+    ichol_regularization = %f
+    ichol_threshold = %f
+    
+A smaller value for ichol_threshold might help if sufficient memory is available.
+A larger value for ichol_threshold might help if more time is available.
+
+See help of matting_closed_form for more info.
+"""%(e, ichol_regularization, ichol_threshold))
         
         def precondition(r):
             return ichol_solve(L, r)
