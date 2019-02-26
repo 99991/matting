@@ -1,5 +1,6 @@
 #include "kdtree.h"
 #include <stdlib.h>
+#include <assert.h>
 
 // Using int type for sizes instead of size_t due to 32/64-bit issues.
 void knn(
@@ -12,6 +13,11 @@ void knn(
     const int point_dimension,
     const int k
 ){
+    // Ensure that function is not used incorrectly.
+    // Can't query for k data points if there are less than k.
+    assert(k <= n_data_points);
+    if (k > n_data_points) exit(-1);
+    
     size_t *indices = (size_t*)malloc(n_data_points*sizeof(*indices));
     
     for (int i = 0; i < n_data_points; i++){
