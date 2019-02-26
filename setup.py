@@ -30,7 +30,7 @@ compile_commands = {
 
 # Additionally, uncomment the next line:
 if use_vcc:
-    compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src,
+    compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src
 
 def load_text(path):
     with open(path) as f:
