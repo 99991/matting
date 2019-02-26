@@ -1,3 +1,4 @@
+#include "common.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -11,14 +12,14 @@ int compare_int(const void *p, const void *q){
         0;
 }
 
-void ichol_free(void *ptr){
+DLLEXPORT void ichol_free(void *ptr){
     free(ptr);
 }
 
 #define ICHOL_NOT_POSITIVE_DEFINITE -1
 #define ICHOL_OUT_OF_MEMORY -2
 
-int ichol(
+DLLEXPORT int ichol(
     const double *A_data,
     const int *A_indices,
     const int *A_indptr,
@@ -207,7 +208,7 @@ cleanup:
     return error;
 }
 
-void backsub_L_csc_inplace(
+DLLEXPORT void backsub_L_csc_inplace(
     const double *L_data,
     const int *L_indices,
     const int *L_indptr,
@@ -230,7 +231,7 @@ void backsub_L_csc_inplace(
     }
 }
 
-void backsub_LT_csc_inplace(
+DLLEXPORT void backsub_LT_csc_inplace(
     const double *L_data,
     const int *L_indices,
     const int *L_indptr,
@@ -253,7 +254,7 @@ void backsub_LT_csc_inplace(
     }
 }
 
-void backsub_L_csr_inplace(
+DLLEXPORT void backsub_L_csr_inplace(
     const double *L_data,
     const int *L_indices,
     const int *L_indptr,

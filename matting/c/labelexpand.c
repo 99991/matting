@@ -1,6 +1,7 @@
+#include "common.h"
 #include <math.h>
 
-void label_expand(
+DLLEXPORT void label_expand(
     const double *image,
     const int *rows,
     const int *cols,

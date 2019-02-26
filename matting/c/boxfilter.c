@@ -1,8 +1,9 @@
+#include "common.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
-void boxfilter_valid(
+DLLEXPORT void boxfilter_valid(
     const double *src,
     double *dst,
     int src_stride,
@@ -54,7 +55,7 @@ static inline double get(const double *data, int x, int y, int nx, int ny){
         data[x + y*nx] : 0.0;
 }
 
-void boxfilter_full(
+DLLEXPORT void boxfilter_full(
     const double *src,
     double *dst,
     int nx,

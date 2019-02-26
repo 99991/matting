@@ -1,9 +1,10 @@
+#include "common.h"
 #include "kdtree.h"
 #include <stdlib.h>
 #include <assert.h>
 
 // Using int type for sizes instead of size_t due to 32/64-bit issues.
-void knn(
+DLLEXPORT void knn(
     float *data_points,
     float *query_points,
     int *out_neighbor_indices,
