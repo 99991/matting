@@ -21,6 +21,11 @@ compile_commands = {
     "linux": "gcc %s %s -fPIC -lm -o libmatting.so"%(flags, src),
 }
 
+# If you want to compile with Visual Studio, find the location of
+# vcvars64.bat and run it before running "python setup.py install".
+# Additionally, uncomment the next line:
+#compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src,
+
 def load_text(path):
     with open(path) as f:
         return f.read()
