@@ -69,7 +69,7 @@ void naive_knn(
 }
 
 float randf(){
-    return rand32() / (float)RAND_MAX;
+    return (rand32() - 1) / (float)0xffffffff;
 }
 
 void knn_test(){
