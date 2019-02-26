@@ -2,6 +2,7 @@ import os
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 import shutil
+import sys
 
 src = """
 
@@ -15,12 +16,10 @@ labelexpand.c
 
 flags = "-O3 -Wall -Wextra -pedantic -shared"
 
-commands = [
-    # Windows
-    "gcc %s %s -o libmatting.dll"%(flags, src),
-    # Linux
-    "gcc %s %s -fPIC -lm -o libmatting.so"%(flags, src),
-]
+compile_commands = {
+    "win32": "gcc %s %s -o libmatting.dll"%(flags, src),
+    "linux": "gcc %s %s -fPIC -lm -o libmatting.so"%(flags, src),
+}
 
 def load_text(path):
     with open(path) as f:
@@ -45,24 +44,17 @@ def cleanup():
     ]:
         shutil.rmtree(directory, ignore_errors=True)
 
-def try_to_compile():
-    for command in commands:
-        err = os.system(command)
-        
-        if err == 0:
-            print('Command succeeded:\n"%s"'%command)
-            return err
-        
-        print('Command failed (that is ok if a later comand succeeds):\n%s'%command)
-    
-    return err
-
 class InstallLibmatting(install):
     def run(self):
+        if sys.platform not in compile_commands:
+            raise Exception("%s platform not supported"%sys.platform)
+        
+        compile_command = compile_commands[sys.platform]
+        
         print("building libmatting library")
         os.chdir("matting/c")
         
-        err = try_to_compile()
+        err = os.system(compile_command)
         
         os.chdir("../..")
         
