@@ -2,13 +2,17 @@
 
 # Install
 
-Currently, only Linux is supported.
+### Linux
 
 ```
 git clone https://github.com/99991/matting.git
 cd matting
 python setup.py install
 ```
+
+### Windows
+
+https://github.com/99991/matting/blob/master/docs/README.md
 
 # Minimal Example
 
