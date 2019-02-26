@@ -4,6 +4,13 @@ from setuptools.command.install import install
 import shutil
 import sys
 
+compiler = "gcc"
+
+# If you want to compile with Visual Studio, find the location of
+# vcvars64.bat and run it before running "python setup.py install"
+# and set use_vcc to True.
+use_vcc = False
+
 src = """
 
 ichol.c
@@ -17,14 +24,13 @@ labelexpand.c
 flags = "-O3 -Wall -Wextra -pedantic -shared"
 
 compile_commands = {
-    "win32": "gcc %s %s -o libmatting.dll"%(flags, src),
-    "linux": "gcc %s %s -fPIC -lm -o libmatting.so"%(flags, src),
+    "win32": "%s %s %s -o libmatting.dll"%(compiler, flags, src),
+    "linux": "%s %s %s -fPIC -lm -o libmatting.so"%(compiler, flags, src),
 }
 
-# If you want to compile with Visual Studio, find the location of
-# vcvars64.bat and run it before running "python setup.py install".
 # Additionally, uncomment the next line:
-#compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src,
+if use_vcc:
+    compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src,
 
 def load_text(path):
     with open(path) as f:
