@@ -18,7 +18,7 @@ https://mingw-w64.org/doku.php/download/mingw-builds
 
 Find out where gcc was installed. In my case, it was installed at:
 
-C:\Program Files\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
+`C:\Program Files\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin`
 
 ![gcc install location](https://raw.githubusercontent.com/99991/matting/master/docs/mingw64_install_path.png)
 
@@ -40,13 +40,13 @@ Alternatively, you can install the 64-bit version of the Tiny C Compiler
 http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.27-win64-bin.zip
 
 In this case, you will have to change the compiler in "setup.py" from
-"gcc" to "tcc" and add the directory which contains tcc.exe to your PATH.
+`compiler = "gcc"` to `compiler = "tcc"` and add the directory which contains tcc.exe to your PATH.
 
 If you want to use Visual Studio (not recommended, rarely tested),
-you will have to set
+you will have to
 
-- "use_vcc = True" in setup.py
-- find and run "vcvars64.bat" before running "python.setup.py install" in step 4
+- set `use_vcc = True` in setup.py
+- find and run `vcvars64.bat` before running `python.setup.py install` in step 4
 - install the Visual Studio compiler somehow, for example from:
 
 https://visualstudio.microsoft.com/visual-cpp-build-tools/
