@@ -20,7 +20,7 @@ _knn.argtypes = [
     c_int,
     c_int]
 
-def knn(data_points, query_points, k):
+def knn(data_points, query_points, k, overwrite_data_points=False):
     if data_points.dtype == np.float64:
         data_points = data_points.astype(np.float32)
     
@@ -41,9 +41,18 @@ def knn(data_points, query_points, k):
     indices = np.empty(n_query_points*k, dtype=np.int32)
     squared_distances = np.empty(n_query_points*k, dtype=np.float32)
     
+    data_points = data_points.ravel()
+    query_points = query_points.ravel()
+    
+    if not overwrite_data_points:
+        data_points = data_points.copy()
+    
+    assert(data_points.flags['C_CONTIGUOUS'])
+    assert(query_points.flags['C_CONTIGUOUS'])
+    
     _knn(
-        np.ctypeslib.as_ctypes(data_points.flatten()),
-        np.ctypeslib.as_ctypes(query_points.flatten()),
+        np.ctypeslib.as_ctypes(data_points),
+        np.ctypeslib.as_ctypes(query_points),
         np.ctypeslib.as_ctypes(indices),
         np.ctypeslib.as_ctypes(squared_distances),
         n_data_points,
@@ -75,7 +84,6 @@ def test():
                 indices2[i] = np.argsort(distances)[:k]
 
             assert(indices1.shape == indices2.shape)
-            
             assert(np.allclose(indices1, indices2))
     print("tests passed")
 
