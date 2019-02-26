@@ -32,7 +32,7 @@ DLLEXPORT void knn(
         point_dimension);
 
     // Working array size must be 1 greater then k
-    struct kdtree_neighbor neighbors[k + 1];
+    struct kdtree_neighbor *neighbors = (struct kdtree_neighbor*)malloc((k + 1)*sizeof(*neighbors));
     
     for (int i = 0; i < n_query_points; i++){
         float *query_point = query_points + i*point_dimension;
@@ -46,6 +46,7 @@ DLLEXPORT void knn(
         }
     }
 
+    free(neighbors);
     kdtree_free(tree);
     free(indices);
 }
