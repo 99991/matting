@@ -11,7 +11,7 @@ import scipy.sparse.linalg
 def alpha_matting(
     image,
     trimap,
-    method="knn",
+    method="cf",
     ichol_regularization=0.0,
     ichol_threshold=1e-4,
     lkm_radius=10,
