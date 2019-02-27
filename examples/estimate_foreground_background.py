@@ -18,8 +18,11 @@ new_background = load_image(
 
 alpha = alpha_matting(image, trimap, print_info=True)
 
+method = "sampling"
+method = "cf"
+
 foreground, background = estimate_foreground_background(
-    image, trimap, alpha, print_info=True)
+    image, alpha, method=method, print_info=True)
 
 image_on_new_background = blend(foreground, new_background, alpha)
 
