@@ -5,6 +5,7 @@
 ### Linux
 
 ```
+sudo apt-get install build-essential
 git clone https://github.com/99991/matting.git
 cd matting
 python setup.py install
