@@ -13,9 +13,7 @@ python setup.py install
 
 ### Windows
 
-On windows, you will first have to install gcc if you want to use alpha matting methods other than vcycle.
-
-https://github.com/99991/matting/blob/master/docs/INSTALL_WINDOWS.md
+On windows, you will first have to ![install gcc](https://github.com/99991/matting/blob/master/docs/INSTALL_WINDOWS.md) if you want to use alpha matting methods other than vcycle.
 
 # Minimal Example
 
