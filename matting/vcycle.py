@@ -38,6 +38,8 @@ def vcycle(A, b, shape, cache):
     n = h*w
     
     omega = 0.8
+    num_pre_iter = 0
+    num_post_iter = 1
     
     if n <= 32:
         return scipy.sparse.linalg.spsolve(A, b)
@@ -55,10 +57,11 @@ def vcycle(A, b, shape, cache):
     else:
         upsample, downsample, coarse_A, A_diag, inv_A_diag = cache[shape]
 
-    # one dampened jacobi iteration on x0 = 0
+    # dampened jacobi iteration on x0 = 0
     x = omega * inv_A_diag * b
-    # maybe more iterations?
-    #x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega)*x
+    # more dampened jacobi iterations on x
+    for _ in range(num_pre_iter):
+        x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega)*x
     
     # calculate residual error to perfect solution
     residual = b - A @ x
@@ -72,7 +75,8 @@ def vcycle(A, b, shape, cache):
     # apply coarse correction
     x += upsample @ coarse_x
     
-    # one dampened jacobi iteration on x
-    x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega)*x
+    # dampened jacobi iterations on x
+    for _ in range(num_post_iter):
+        x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega)*x
     
     return x

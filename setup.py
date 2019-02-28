@@ -70,8 +70,7 @@ class InstallLibmatting(install):
         os.chdir("../..")
         
         if err:
-            cleanup()
-            raise Exception("Failed to compile libmatting")
+            print("ERROR: Failed to compile libmatting. Only vcycle method will be available.")
         
         install.run(self)
         
