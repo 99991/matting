@@ -2,8 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.so
-.dll
+*.so
+*.dll
 
 # Distribution / packaging
 .Python
