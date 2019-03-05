@@ -26,6 +26,7 @@ flags = "-O3 -Wall -Wextra -pedantic -shared"
 compile_commands = {
     "win32": "%s %s %s -o libmatting.dll"%(compiler, flags, src),
     "linux": "%s %s %s -fPIC -lm -o libmatting.so"%(compiler, flags, src),
+    "darwin": "%s %s %s -fPIC -lm -o libmatting.so"%(compiler, flags, src),
 }
 
 # Additionally, uncomment the next line:
@@ -43,12 +44,6 @@ exec(load_text(path), about)
 
 def cleanup():
     print("cleanup")
-    os.chdir("matting/c")
-    try:
-        os.remove("libmatting.so")
-    except OSError:
-        pass
-    os.chdir("../..")
     for directory in [
         "build",
         "matting.egg-info",

@@ -2,18 +2,33 @@
 
 # Install
 
+Install a C compiler and then run:
+
+```
+git clone https://github.com/99991/matting.git
+cd matting
+python setup.py install
+cd examples
+python plant_example.py
+```
+
+## Installing a C compiler
+
 ### Linux
 
 ```
 sudo apt-get install build-essential
-git clone https://github.com/99991/matting.git
-cd matting
-python setup.py install
 ```
+
+Replace `python` with `python3` if that is not your default.
 
 ### Windows
 
-On windows, you will first have to [install gcc](https://github.com/99991/matting/blob/master/docs/INSTALL_WINDOWS.md) if you want to use alpha matting methods other than vcycle.
+[Install Python and gcc on Windows](https://github.com/99991/matting/blob/master/docs/INSTALL_WINDOWS.md) if you want to use alpha matting methods other than vcycle.
+
+### Mac
+
+Install XCode through the App store
 
 # Minimal Example
 
