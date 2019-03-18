@@ -35,8 +35,8 @@ Install XCode through the App store.
 ```python
 from matting import alpha_matting, load_image, save_image
 
-image = load_image("image.png")
-trimap = load_image("trimap.png")
+image = load_image("image.png", mode="RGB")
+trimap = load_image("trimap.png", mode="GRAY")
 
 alpha = alpha_matting(image, trimap)
 
