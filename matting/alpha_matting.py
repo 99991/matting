@@ -12,13 +12,17 @@ def alpha_matting(
     image,
     trimap,
     method="vcycle",
+    cf_preconditioner="ichol",
     ichol_regularization=0.0,
     ichol_threshold=1e-4,
     lkm_radius=10,
     lambd=100.0,
     epsilon=1e-7,
-    max_iter=2000,
+    max_iterations=2000,
     relative_tolerance=1e-6,
+    absolute_tolerance=0.0,
+    callback=None,
+    x0=None,
     print_info=False,
 ):
     """
@@ -74,6 +78,11 @@ def alpha_matting(
             "lkm"
             "ifm"
             "vcycle"
+    cf_preconditioner: string
+        Possible preconditioners are:
+            None
+            "jacobi"
+            "ichol"
     ichol_regularization: float64
         Increase to increase probability that incomplete
         Cholesky decomposition can be built successfully.
@@ -91,11 +100,18 @@ def alpha_matting(
     epsilon: float64
         Regularization factor for closed-form matting.
         Larger values lead to faster convergence but more blurry alpha.
-    max_iter: int
+    max_iterations: int
         Maximum number of iterations of conjugate gradient descent.
     relative_tolerance: float64
         Conjugate gradient descent will stop when
         norm(A x - b) < relative_tolerance norm(b)
+    absolute_tolerance: float64
+        Conjugate gradient descent will stop when
+        norm(A x - b) < absolute_tolerance
+    callback: func(A, x, b)
+        callback to inspect temporary result after each iteration.
+    x0: np.ndarray of dtype np.float64
+        Initial guess for alpha matte.
     print_info: bool
         If to print convergence information.
         
@@ -120,23 +136,28 @@ def alpha_matting(
         
         A, b = make_system(L, trimap, lambd)
         
-        params = [
-            (ichol_regularization, ichol_threshold),
-            (1e-4, 1e-4),
-            (0.0, 1e-5),
-            (1e-4, 1e-5),
-            (0.0, 0.0),
-        ]
+        if cf_preconditioner is None:
+            def precondition(r):
+                return r
         
-        for ichol_regularization, ichol_threshold in params:
-            try:
-                A_regularized = A if ichol_regularization == 0.0 else \
-                    A + ichol_regularization*scipy.sparse.identity(A.shape[0])
-                
-                L = ichol(A_regularized.tocsc(), ichol_threshold)
-                break
-            except ValueError as e:
-                print("""WARNING:
+        elif cf_preconditioner == "ichol":
+            params = [
+                (ichol_regularization, ichol_threshold),
+                (1e-4, 1e-4),
+                (0.0, 1e-5),
+                (1e-4, 1e-5),
+                (0.0, 0.0),
+            ]
+            
+            for ichol_regularization, ichol_threshold in params:
+                try:
+                    A_regularized = A if ichol_regularization == 0.0 else \
+                        A + ichol_regularization*scipy.sparse.identity(A.shape[0])
+                    
+                    L = ichol(A_regularized.tocsc(), ichol_threshold)
+                    break
+                except ValueError as e:
+                    print("""WARNING:
 Incomplete Cholesky decomposition failed (%s) with:
     ichol_regularization = %f
     ichol_threshold = %f
@@ -146,10 +167,19 @@ A larger value for ichol_threshold might help if more time is available.
 
 See help of matting_closed_form for more info.
 """%(e, ichol_regularization, ichol_threshold))
+            
+            def precondition(r):
+                return ichol_solve(L, r)
         
-        def precondition(r):
-            return ichol_solve(L, r)
-    
+        elif cf_preconditioner == "jacobi":
+            inv_diag = 1/A.diagonal()
+            
+            def precondition(r):
+                return r * inv_diag
+
+        else:
+            raise ValueError('cf_preconditioner must be None, "jacobi" or "ichol", but not %s'%cf_preconditioner)
+
     elif method == "knn":
         L = knn_laplacian(image)
         
@@ -209,10 +239,13 @@ See help of matting_closed_form for more info.
     x = solve_cg(
         A,
         b,
-        max_iter=max_iter,
+        x0=x0,
+        max_iter=max_iterations,
         rtol=relative_tolerance,
+        atol=absolute_tolerance,
         precondition=precondition,
-        print_info=print_info)
+        print_info=print_info,
+        callback=callback)
     
     alpha = np.clip(x, 0, 1).reshape(trimap.shape)
     

@@ -153,6 +153,9 @@ def solve_cg(
 ):
     x = np.zeros(A.shape[0]) if x0 is None else x0.copy()
     
+    if callback is not None:
+        callback(A, x, b)
+    
     if precondition is None:
         def precondition(r):
             return r
@@ -177,7 +180,7 @@ def solve_cg(
                 residual_error))
         
         if callback is not None:
-            callback(x)
+            callback(A, x, b)
         
         if residual_error < atol or residual_error < rtol*norm_b:
             break
