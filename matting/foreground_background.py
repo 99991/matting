@@ -41,18 +41,26 @@ def estimate_foreground_background_sampling(
         F_indices = np.random.randint(len(true_foreground), size=(h, w))
         B_indices = np.random.randint(len(true_background), size=(h, w))
         
-        improve(
-            true_foreground[F_indices],
-            true_background[B_indices])
+        new_foreground = true_foreground[F_indices]
+        new_background = true_background[B_indices]
+        
+        new_foreground[is_fg] = image[is_fg]
+        new_background[is_bg] = image[is_bg]
+        
+        improve(new_foreground, new_background)
 
         # improve with neighbor values
         foreground_neighbors = make_windows(pad(foreground))
         background_neighbors = make_windows(pad(background))
         
         for i in range(9):
-            improve(
-                foreground_neighbors[:, :, i, :],
-                background_neighbors[:, :, i, :])
+            new_foreground = foreground_neighbors[:, :, i, :]
+            new_background = background_neighbors[:, :, i, :]
+            
+            new_foreground[is_fg] = image[is_fg]
+            new_background[is_bg] = image[is_bg]
+            
+            improve(new_foreground, new_background)
 
         if print_info:
             print("iteration %2d/%2d - error %f"%(

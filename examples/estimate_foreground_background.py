@@ -18,8 +18,8 @@ new_background = load_image(
 
 alpha = alpha_matting(image, trimap, print_info=True)
 
-method = "sampling"
 method = "cf"
+method = "sampling"
 
 foreground, background = estimate_foreground_background(
     image, alpha, method=method, print_info=True)
