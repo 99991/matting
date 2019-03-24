@@ -1,88 +1,162 @@
 #include "common.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
 
-DLLEXPORT void boxfilter_valid(
-    const double *src,
-    double *dst,
-    int src_stride,
-    int dst_stride,
-    int nx,
-    int ny,
-    int r
-){
-    int nx2 = nx - 2*r;
-    
-    double *tmp = (double*)malloc(nx2*ny*sizeof(*tmp));
-    
-    for (int y = 0; y < ny; y++){
-        double sum = 0.0;
-        for (int x = 0; x <= 2*r; x++) sum += src[x + y*src_stride];
-        tmp[0 + y*nx2] = sum;
-        
-        for (int x = r + 1; x < nx - r; x++){
-            sum -= src[x - r - 1 + y*src_stride];
-            sum += src[x + r     + y*src_stride];
-            
-            tmp[x - r + y*nx2] = sum;
-        }
-    }
-    
-    for (int x = 0; x < nx2; x++){
-        double sum = 0.0;
-        for (int y = 0; y <= 2*r; y++) sum += tmp[x + y*nx2];
-        dst[x + 0*dst_stride] = sum;
-        
-        for (int y = r + 1; y < ny - r; y++){
-            sum -= tmp[x + (y - r - 1)*nx2];
-            sum += tmp[x + (y + r    )*nx2];
-            
-            dst[x + (y - r)*dst_stride] = sum;
-        }
-    }
-    
-    free(tmp);
+static inline double get_img(const double *img, int m, int n, int i, int j){
+    return (0 <= i && i < m && 0 <= j && j < n) ? img[i*n + j] : 0.0;
 }
 
-// TODO inline this function into boxfilter_full
-static inline double get(const double *data, int x, int y, int nx, int ny){
-    return
-        0 <= x &&
-        x < nx &&
-        0 <= y &&
-        y < ny ?
-        data[x + y*nx] : 0.0;
+static inline double get_row(const double *row, int n, int j){
+    return (0 <= j && j < n) ? row[j] : 0.0;
 }
 
-DLLEXPORT void boxfilter_full(
-    const double *src,
+DLLEXPORT void boxfilter(
     double *dst,
-    int nx,
-    int ny,
-    int r
+    int md,
+    int nd,
+    const double *src,
+    int ms,
+    int ns,
+    int di,
+    int dj,
+    int r,
+    int mode
 ){
-    int dst_stride = nx + 2*r;
+    assert(mode == 0 || mode == 1 || mode == 2);
     
-    double *tmp = (double*)malloc((nx + 2*r)*(ny + 2*r)*sizeof(*tmp));
+    assert(md >= 0);
+    assert(nd >= 0);
+    
+    double *prev_row = (double*)malloc(ns*sizeof(*prev_row));
+    
+    int i = -1;
+    for (int j = 0; j < ns; j++){
+        double s = 0.0;
+        for (int i2 = i - r + di; i2 < i + r + 1 + di; i2++){
+            s += get_img(src, ms, ns, i2, j);
+        }
+        prev_row[j] = s;
+    }
+    
+    for (int i = 0; i < md; i++){
+        for (int j = 0; j < ns; j++){
+            double s = prev_row[j];
+            s -= get_img(src, ms, ns, i - r - 1 + di, j);
+            s += get_img(src, ms, ns, i + r     + di, j);
+            prev_row[j] = s;
+        }
+        
+        int j = -1;
+        double s = 0.0;
+        for (int j2 = j - r + dj; j2 < j + r + 1 + dj; j2++){
+            s += get_row(prev_row, ns, j2);
+        }
+        
+        for (int j = 0; j < nd; j++){
+            s -= get_row(prev_row, ns, j - r - 1 + dj);
+            s += get_row(prev_row, ns, j + r     + dj);
+            dst[i*nd + j] = s;
+        }
+    }
 
-    // slow branchy 2*nx*ny
-    for (int y = 0; y < ny + 2*r; y++){
-        double sum = 0.0;
-        for (int x = 0; x < nx + 2*r; x++){
-            sum -= get(src, x - r - r - 1, y - r, nx, ny);
-            sum += get(src, x, y - r, nx, ny);
-            tmp[x + y*dst_stride] = sum;
-        }
+    free(prev_row);
+}
+
+#include <stdio.h>
+#include <time.h>
+
+static inline double sec(){
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec + 1e-9*t.tv_nsec;
+}
+
+static void test(int r, int ms, int ns, int mode, int n_runs){
+    int md, nd, di, dj;
+    
+    switch (mode){
+    case 0:
+        md = ms - 2*r;
+        nd = ns - 2*r;
+        di = r;
+        dj = r;
+        break;
+    
+    case 1:
+        md = ms;
+        nd = ns;
+        di = 0;
+        dj = 0;
+        break;
+    
+    case 2:        
+        md = ms + 2*r;
+        nd = ns + 2*r;
+        di = -r;
+        dj = -r;
+        break;
     }
-    for (int x = 0; x < nx + 2*r; x++){
-        double sum = 0.0;
-        for (int y = 0; y < ny + 2*r; y++){
-            sum -= get(tmp, x, y - r - 1, nx + 2*r, ny + 2*r);
-            sum += get(tmp, x, y + r    , nx + 2*r, ny + 2*r);
-            dst[x + y*dst_stride] = sum;
+    
+    double *src = (double*)malloc(ms*ns*sizeof(*src));
+    double *dst = (double*)malloc(md*nd*sizeof(*dst));
+    
+    for (int i = 0; i < ms*ns; i++){
+        src[i] = rand() / (double)RAND_MAX;
+    }
+    
+    for (int i = 0; i < md*nd; i++){
+        dst[i] = rand() / (double)RAND_MAX;
+    }
+    
+    for (int k = 0; k < n_runs; k++){
+        
+        double t = sec();
+        
+        boxfilter(dst, md, nd, src, ms, ns, di, dj, r, mode);
+        
+        double dt = sec() - t;
+        
+        printf("%f gbyte/sec\n", md*nd*8e-9/dt);
+    }
+    
+    double max_error = 0.0;
+    
+    for (int i = 0; i < md; i++){
+        for (int j = 0; j < nd; j++){
+            double s = 0.0;
+            for (int i2 = i - r + di; i2 <= i + r + di; i2++){
+                for (int j2 = j - r + dj; j2 <= j + r + dj; j2++){
+                    s += get_img(src, ms, ns, i2, j2);
+                }
+            }
+            
+            double error = s - dst[i*nd + j];
+            
+            if (error < 0.0) error = -error;
+            
+            if (max_error < error){
+                max_error = error;
+            }
         }
     }
     
-    free(tmp);
+    assert(max_error < 1e-10);
+    
+    free(src);
+    free(dst);
+}
+
+int main(){
+    test(4, 512, 512, 0, 10);
+    
+    for (int r = 1; r < 10; r++){
+        int min_size = 2*r + 1;
+        for (int ms = min_size; ms < min_size + 5*r; ms++){
+            for (int ns = min_size; ns < min_size + 5*r; ns++){
+                for (int mode = 0; mode <= 2; mode++){
+                    test(r, ms, ns, mode, 1);
+                }
+            }
+        }
+    }
 }
