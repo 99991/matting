@@ -8,57 +8,43 @@ def make_lkm_operators(image, eps=1e-4, radius=2):
     window_area = window_size*window_size
     I = image
     h, w, depth = I.shape
-    n = w*h
-    w2 = w - 2*radius
-    h2 = h - 2*radius
-    r,g,b = I.transpose(2, 0, 1)
     
+    # means over neighboring pixels
     means = boxfilter(I, radius, mode='valid')/window_area
-    covs = boxfilter(vec_vec_outer(I, I), radius, mode='valid')
-    I_sum = boxfilter(I, radius, mode='valid')
-    covs -= 2*vec_vec_outer(means, I_sum)
-    covs += vec_vec_outer(means, means)*window_area
-    covs /= window_area
-    inv_covs = np.linalg.inv(covs + eps/window_area*np.eye(depth))
-    Vmeans = mat_vec_dot(inv_covs, means)
-    VI = mat_vec_dot(inv_covs, I[radius:-radius, radius:-radius])
-    meanVmeans = vec_vec_dot(means, Vmeans)
-    meanVmeansPlusOne = meanVmeans + 1
-    filterweights = boxfilter(np.full((h2, w2), -1.0*window_area), radius, mode='full')
+    
+    # color covariance over neighboring pixels
+    covs = boxfilter(vec_vec_outer(I, I), radius, mode='valid')/window_area
+    covs -= vec_vec_outer(means, means)
+    
+    # precompute values which do not depend on p
+    V = np.linalg.inv(covs + eps/window_area*np.eye(depth))/window_area
+    Vm = mat_vec_dot(V, means)
+    mVm = 1/window_area + vec_vec_dot(means, Vm)
+    c = boxfilter(np.ones((h - 2*radius, w - 2*radius)), radius, mode='full')
 
-    L_diag = boxfilter(window_area - meanVmeansPlusOne, radius, mode='full')
-    temp = 2*boxfilter(Vmeans, radius, mode='full')
-    temp -= mat_vec_dot(boxfilter(inv_covs, radius, mode='full'), I)
-    L_diag += vec_vec_dot(I, temp)
-    L_diag /= window_area
-
-    L_diag = L_diag.flatten()
+    # compute diagonal of L
+    d_L = boxfilter(1.0 - mVm, radius, mode='full')
+    temp = 2*boxfilter(Vm, radius, mode='full')
+    temp -= mat_vec_dot(boxfilter(V, radius, mode='full'), I)
+    d_L += vec_vec_dot(I, temp)
 
     def L_dot(p):
         p = p.reshape(h, w)
-
-        pr = boxfilter(p*r, radius, mode='valid')
-        pg = boxfilter(p*g, radius, mode='valid')
-        pb = boxfilter(p*b, radius, mode='valid')
         
-        p_means = boxfilter(p, radius, mode='valid')
-
-        temp = p_means*meanVmeansPlusOne
-        temp -= pr*Vmeans[:, :, 0]
-        temp -= pg*Vmeans[:, :, 1]
-        temp -= pb*Vmeans[:, :, 2]
-        Lp = boxfilter(temp, radius, mode='full')
+        p_sums = boxfilter(p, radius, mode='valid')
+        pI_sums = boxfilter(p[:, :, np.newaxis]*I, radius, mode='valid')
         
-        Lp += r*boxfilter(inv_covs[:, :, 0, 0]*pr + inv_covs[:, :, 0, 1]*pg + inv_covs[:, :, 0, 2]*pb - p_means*Vmeans[:, :, 0], radius, mode='full')
-        Lp += g*boxfilter(inv_covs[:, :, 1, 0]*pr + inv_covs[:, :, 1, 1]*pg + inv_covs[:, :, 1, 2]*pb - p_means*Vmeans[:, :, 1], radius, mode='full')
-        Lp += b*boxfilter(inv_covs[:, :, 2, 0]*pr + inv_covs[:, :, 2, 1]*pg + inv_covs[:, :, 2, 2]*pb - p_means*Vmeans[:, :, 2], radius, mode='full')
+        p_L = c*p
         
-        Lp += p*filterweights
-        Lp *= -1/window_area
+        temp = p_sums[:, :, np.newaxis]*Vm - mat_vec_dot(V, pI_sums)
+        p_L += vec_vec_dot(I, boxfilter(temp, radius, mode='full'))
         
-        return Lp.flatten()
+        temp = p_sums*mVm - vec_vec_dot(pI_sums, Vm)
+        p_L -= boxfilter(temp, radius, mode='full')
+        
+        return p_L.flatten()
 
-    L = scipy.sparse.linalg.LinearOperator(matvec=L_dot, shape=(n, n))
+    L = scipy.sparse.linalg.LinearOperator(matvec=L_dot, shape=(w*h, w*h))
 
-    return L, L_diag
+    return L, d_L.flatten()
 
