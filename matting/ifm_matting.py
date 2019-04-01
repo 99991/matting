@@ -22,6 +22,20 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                                               #
 ############################################################################################
 
+"""
+The information flow matting method is provided for academic use only.
+If you use the information flow alpha matting method for an academic
+publication, please cite corresponding publications referenced in the
+description of each function, as well as this toolbox itself:
+
+@MISC{abmt,
+author={Ya\u{g}\{i}z Aksoy},
+title={Affinity-based matting toolbox},
+year={2017},
+howpublished = {\url{https://github.com/yaksoy/AffinityBasedMattingToolbox}},
+}
+"""
+
 import numpy as np
 import numpy.linalg
 import scipy.sparse.linalg

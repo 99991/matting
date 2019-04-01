@@ -26,6 +26,27 @@ def alpha_matting(
     print_info=False,
 ):
     """
+    Propagates approximate alpha values of trimap into unknown regions
+    based on image color.
+    A system of linear equations is assembled and then solved with
+    conjugate gradient descent.
+    To accelerate convergence, an incomplete Cholesky preconditioner is
+    used.
+    The effectiveness of this preconditioner can be controlled with the
+    "ichol_*" parameters.
+    
+    The information flow matting method is provided for academic use only.
+    If you use the information flow alpha matting method for an academic
+    publication, please cite corresponding publications referenced in the
+    description of each function, as well as this toolbox itself:
+
+    @MISC{abmt,
+    author={Ya\u{g}\{i}z Aksoy},
+    title={Affinity-based matting toolbox},
+    year={2017},
+    howpublished = {\url{https://github.com/yaksoy/AffinityBasedMattingToolbox}},
+    }
+    
     Closed form (cf) matting based on:
         Levin, Anat, Dani Lischinski, and Yair Weiss.
         "A closed-form solution to natural image matting."
@@ -52,15 +73,6 @@ def alpha_matting(
         Lee, Philip G., and Ying Wu.
         "Scalable matting: A sub-linear approach."
         arXiv preprint arXiv:1404.3933 (2014).
-    
-    Propagates approximate alpha values of trimap into unknown regions
-    based on image color.
-    A system of linear equations is assembled and then solved with
-    conjugate gradient descent.
-    To accelerate convergence, an incomplete Cholesky preconditioner is
-    used.
-    The effectiveness of this preconditioner can be controlled with the
-    "ichol_*" parameters.
     
     Parameters
     ----------
