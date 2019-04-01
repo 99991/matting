@@ -1,4 +1,5 @@
-# The information flow matting method implementation in this file is based on
+# The information flow alpha matting method implementation in this file
+# is based on
 # https://github.com/yaksoy/AffinityBasedMattingToolbox
 # by Yağız Aksoy.
 #
