@@ -136,3 +136,17 @@ Lee, Philip G., and Ying Wu.
 "Scalable matting: A sub-linear approach."
 arXiv preprint arXiv:1404.3933 (2014).
 ```
+
+The information flow alpha matting method is provided for academic use only.
+If you use the information flow alpha matting method for an academic
+publication, please cite corresponding publications referenced in the
+description of each function:
+
+```
+@MISC{abmt,
+author={Ya\u{g}\{i}z Aksoy},
+title={Affinity-based matting toolbox},
+year={2017},
+howpublished = {\url{https://github.com/yaksoy/AffinityBasedMattingToolbox}},
+}
+```

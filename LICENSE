@@ -1,4 +1,4 @@
-The information flow matting method implementation at
+The information flow alpha matting method implementation at
 https://github.com/99991/matting/blob/master/matting/ifm_matting.py
 is based on
 https://github.com/yaksoy/AffinityBasedMattingToolbox
@@ -25,7 +25,7 @@ The following applies to that file:
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                                               #
 ############################################################################################
 
-The information flow matting method is provided for academic use only.
+The information flow alpha matting method is provided for academic use only.
 If you use the information flow alpha matting method for an academic
 publication, please cite corresponding publications referenced in the
 description of each function, as well as this toolbox itself:

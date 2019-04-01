@@ -35,7 +35,7 @@ def alpha_matting(
     The effectiveness of this preconditioner can be controlled with the
     "ichol_*" parameters.
     
-    The information flow matting method is provided for academic use only.
+    The information flow alpha matting method is provided for academic use only.
     If you use the information flow alpha matting method for an academic
     publication, please cite corresponding publications referenced in the
     description of each function, as well as this toolbox itself:
