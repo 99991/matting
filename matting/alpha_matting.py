@@ -39,12 +39,12 @@ def alpha_matting(
     If you use the information flow alpha matting method for an academic
     publication, please cite corresponding publications referenced in the
     description of each function, as well as this toolbox itself:
-
-    @MISC{abmt,
-    author={Ya\u{g}\{i}z Aksoy},
-    title={Affinity-based matting toolbox},
-    year={2017},
-    howpublished = {\url{https://github.com/yaksoy/AffinityBasedMattingToolbox}},
+    
+    @INPROCEEDINGS{ifm,
+    author={Aksoy, Ya\u{g}{\i}z and Ayd{\i}n, Tun\c{c} Ozan and Pollefeys, Marc}, 
+    booktitle={Proc. CVPR}, 
+    title={Designing Effective Inter-Pixel Information Flow for Natural Image Matting}, 
+    year={2017}, 
     }
     
     Closed form (cf) matting based on:
