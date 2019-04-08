@@ -3,7 +3,7 @@
 <table>
     <tr>
         <td align="center"><b>Input Image</b></td>
-        <td align="center"><b>Approximate foreground</b></td>
+        <td align="center"><b>Input mask</b></td>
         <td align="center"><b>Extracted foreground</b></td>
     </tr>
     <tr>
