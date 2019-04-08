@@ -16,10 +16,10 @@ new_background = load_image(
     width=image.shape[1],
     height=image.shape[0])
 
-alpha = alpha_matting(image, trimap, print_info=True)
+alpha = alpha_matting(image, trimap, method="ifm", print_info=True)
 
-method = "cf"
 method = "sampling"
+method = "cf"
 
 foreground, background = estimate_foreground_background(
     image, alpha, method=method, print_info=True)

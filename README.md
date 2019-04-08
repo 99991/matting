@@ -1,4 +1,11 @@
-![image of plant, trimap and plant alpha](https://raw.githubusercontent.com/99991/matting/master/examples/plant_result.jpg)
+# Input
+
+![image of plant](https://raw.githubusercontent.com/99991/matting/master/examples/plant_image.jpg)
+![image of trimap](https://raw.githubusercontent.com/99991/matting/master/examples/plant_trimap.jpg)
+
+# Output
+
+![image of trimap](https://raw.githubusercontent.com/99991/matting/master/examples/out/plant_new_background.png)
 
 # Install
 
