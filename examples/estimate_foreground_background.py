@@ -9,13 +9,6 @@ plant_new_background = "out/plant_new_background.png"
 image  = load_image( image_path, "RGB")
 trimap = load_image(trimap_path, "GRAY")
 
-new_background = load_image(
-    path=new_background_path,
-    mode="RGB",
-    interpolation="BILINEAR",
-    width=image.shape[1],
-    height=image.shape[0])
-
 alpha = alpha_matting(image, trimap, method="ifm", print_info=True)
 
 method = "sampling"
@@ -23,6 +16,8 @@ method = "cf"
 
 foreground, background = estimate_foreground_background(
     image, alpha, method=method, print_info=True)
+
+new_background = 1.0
 
 image_on_new_background = blend(foreground, new_background, alpha)
 

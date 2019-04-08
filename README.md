@@ -1,14 +1,23 @@
-# Extract the foreground object of an image
+# Remove the background of an image 
 
-![image of plant](https://raw.githubusercontent.com/99991/matting/master/examples/plant_image.jpg)
-
-# The foreground image with background removed
-
-![image of trimap](https://raw.githubusercontent.com/99991/matting/master/examples/out/plant_new_background.png)
-
-# Using an approximate mask of the foreground object
-
-![image of trimap](https://raw.githubusercontent.com/99991/matting/master/examples/plant_trimap.png)
+<table>
+    <tr>
+        <td align="center"><b>Input Image</b></td>
+        <td align="center"><b>Approximate foreground</b></td>
+        <td align="center"><b>Extracted foreground</b></td>
+    </tr>
+    <tr>
+        <td>
+<img src="https://raw.githubusercontent.com/99991/matting/master/examples/plant_image.jpg" width="256" height="256">
+        </td>
+        <td>
+<img src="https://raw.githubusercontent.com/99991/matting/master/examples/plant_trimap.png" width="256" height="256">
+        </td>
+        <td>
+<img src="https://raw.githubusercontent.com/99991/matting/master/examples/out/plant_new_background.png" width="256" height="256">
+        </td>
+    </tr>
+</table>
 
 # Install
 
