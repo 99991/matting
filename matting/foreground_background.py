@@ -1,186 +1,241 @@
-from .util import make_windows, pad
+from .util import solve_cg, vec_vec_outer, pixel_coordinates, inv2
+from .util import resize_nearest, sparse_conv_matrix, uniform_laplacian
+from .ichol import ichol, ichol_solve
 import numpy as np
 import scipy.sparse
 
-def estimate_foreground_background_sampling(
+def estimate_fb_cf(
     image,
     alpha,
-    num_iterations=20,
-    print_info=False
-):
-    is_fg = alpha > 0.9
-    is_bg = alpha < 0.1
-
-    true_foreground = image[is_fg]
-    true_background = image[is_bg]
-
-    alpha = alpha[:, :, np.newaxis]
-
-    h,w,d = image.shape
-
-    cost = np.full((h, w), np.inf)
-    
-    foreground = np.zeros((h, w, 3))
-    background = np.zeros((h, w, 3))
-
-    def improve(new_foreground, new_background):
-        difference = \
-                 alpha *new_foreground + \
-            (1 - alpha)*new_background - image
-        
-        new_cost = np.sum(difference*difference, axis=2)
-        
-        improved = new_cost < cost
-        
-        cost      [improved] = new_cost      [improved]
-        foreground[improved] = new_foreground[improved]
-        background[improved] = new_background[improved]
-
-    for iteration in range(num_iterations):
-        # improve randomly
-        F_indices = np.random.randint(len(true_foreground), size=(h, w))
-        B_indices = np.random.randint(len(true_background), size=(h, w))
-        
-        new_foreground = true_foreground[F_indices]
-        new_background = true_background[B_indices]
-        
-        new_foreground[is_fg] = image[is_fg]
-        new_background[is_bg] = image[is_bg]
-        
-        improve(new_foreground, new_background)
-
-        # improve with neighbor values
-        foreground_neighbors = make_windows(pad(foreground))
-        background_neighbors = make_windows(pad(background))
-        
-        for i in range(9):
-            new_foreground = foreground_neighbors[:, :, i, :]
-            new_background = background_neighbors[:, :, i, :]
-            
-            new_foreground[is_fg] = image[is_fg]
-            new_background[is_bg] = image[is_bg]
-            
-            improve(new_foreground, new_background)
-
-        if print_info:
-            print("iteration %2d/%2d - error %f"%(
-                iteration + 1, num_iterations, cost.mean()))
-
-    foreground = np.clip(foreground, 0, 1)
-    background = np.clip(background, 0, 1)
-
-    return foreground, background
-
-def lstsq(A, b, num_iterations=1000, tolerance=1e-10, print_info=False):
-    x = np.zeros(A.shape[1])
-
-    AT = A.T
-    b = AT.dot(b)
-
-    residual = b - AT.dot(A.dot(x))
-    p = residual
-    residual_old = np.sum(residual**2)
-
-    for i in range(num_iterations):
-        q = AT.dot(A.dot(p))
-        alpha = residual_old / np.sum(p*q)
-
-        x += alpha*p
-        residual -= alpha*q
-        
-        residual_new = np.inner(residual, residual)
-
-        if print_info:
-            print("%05d/%05d - %e"%(i, num_iterations, residual_new))
-
-        if residual_new < tolerance:
-            if print_info:
-                print("break after %d iterations"%i)
-            break
-
-        p = residual + residual_new/residual_old * p
-        
-        residual_old = residual_new
-    
-    return x
-
-def estimate_foreground_background_cf(
-    image,
-    alpha,
-    print_info=False,
-    **kwargs
+    ichol_threshold = 1e-4,
+    regularization = 1e-5,
+    print_info = False,
 ):
     """
+    Estimate foreground and background of an image using a closed form approach.
+    
     Based on:
         Levin, Anat, Dani Lischinski, and Yair Weiss.
         "A closed-form solution to natural image matting."
         IEEE transactions on pattern analysis and machine intelligence
         30.2 (2008): 228-242.
+    
+    ichol_threshold: float64
+        Incomplete Cholesky decomposition threshold.
+    
+    regularization: float64
+        Smoothing factor for undefined foreground/background regions.
+    
+    print_info:
+        Wheter to print debug information during iterations.
+    
+    Returns
+    -------
+    
+    foreground: np.ndarray of dtype np.float64
+        Foreground image.
+    
+    background: np.ndarray of dtype np.float64
+        Background image.
     """
     
-    height, width, depth = image.shape
-    n = width*height
+    h,w = image.shape[:2]
+    n = w*h
 
-    alpha = alpha[:, :, np.newaxis]
-    alpha_flat = alpha.flatten()
-
-    def idx(y, x):
-        return x + y*width
-
-    d = np.ones((height, width))
-    d[:, 0] = 0
-    d[0, :] = 0
-    d = d.flatten()
-
-    D = scipy.sparse.spdiags(d, 0, n, n)
-    Dx = scipy.sparse.spdiags(-d[-idx(0, -1):], idx(0, -1), n, n)
-    Dy = scipy.sparse.spdiags(-d[-idx(-1, 0):], idx(-1, 0), n, n)
-
-    W0 = scipy.sparse.spdiags(np.sqrt(np.abs((D + Dx).dot(alpha_flat))), 0, n, n)
-    W1 = scipy.sparse.spdiags(np.sqrt(np.abs((D + Dy).dot(alpha_flat))), 0, n, n)
-
-    foreground = np.zeros(image.shape)
-    background = np.zeros(image.shape)
-
-    for i in range(3):
+    a = alpha.flatten()
+    
+    # Build sparse linear equation system
+    AF = scipy.sparse.diags(a)
+    AB = scipy.sparse.diags(1 - a)
+    AA = scipy.sparse.bmat([[AF, AB]])
+    
+    Dx = sparse_conv_matrix(w, h, [1, 0], [0, 0], [0.5, -0.5])
+    Dy = sparse_conv_matrix(w, h, [0, 0], [1, 0], [0.5, -0.5])
+    
+    Dax = scipy.sparse.diags(np.abs(Dx @ a))
+    Day = scipy.sparse.diags(np.abs(Dy @ a))
+    
+    Dxy = Dx.T @ Dax @ Dx + Dy.T @ Day @ Dy
+    
+    Dxy2 = scipy.sparse.bmat([
+        [Dxy, None],
+        [None, Dxy],
+    ])
+    
+    L = uniform_laplacian(w, h, 1)
+    
+    AD = Dxy + regularization*L
+    
+    A = scipy.sparse.bmat([
+        [AF*AF + AD, AF*AB],
+        [AF*AB, AB*AB + AD],
+    ]).tocsc()
+    
+    if print_info:
+        print("computing incomplete Cholesky decomposition")
+    
+    # Build incomplete Cholesky decomposition
+    L_ichol = ichol(A, ichol_threshold)
+    
+    if print_info:
+        print("incomplete Cholesky decomposition computed")
+    
+    # Use incomplete Cholesky decomposition as preconditioner
+    def precondition(x):
+        return ichol_solve(L_ichol, x)
+    
+    foreground = np.zeros((h, w, 3))
+    background = np.zeros((h, w, 3))
+    
+    # For each color channel
+    for channel in range(3):
         if print_info:
-            print("Solving channel %d of 3"%(i + 1))
+            print("solving channel %d"%(1 + channel))
         
-        color = image[:, :, i].flatten()
-
-        alpha0 = scipy.sparse.spdiags(0 + alpha_flat, 0, n, n)
-        alpha1 = scipy.sparse.spdiags(1 - alpha_flat, 0, n, n)
-
-        A = scipy.sparse.bmat([
-            [alpha0, alpha1],
-            [W0.dot(D) + W0.dot(Dx), None],
-            [W1.dot(D) + W1.dot(Dy), None],
-            [None, W0.dot(D) + W0.dot(Dx)],
-            [None, W1.dot(D) + W1.dot(Dy)],
-        ])
-
-        b = np.concatenate([color, np.zeros(n*4)])
-
-        x = lstsq(A, b, print_info=print_info, **kwargs)
-
-        foreground[:, :, i] = x[:n].reshape((height, width))
-        background[:, :, i] = x[n:].reshape((height, width))
-
+        I = image[:, :, channel].flatten()
+        
+        b = AA.T @ I
+        
+        # Solve large sparse linear equation system
+        fb = solve_cg(A, b, precondition=precondition, max_iter=10000, atol=1e-6, rtol=0, print_info=print_info)
+        
+        foreground[:, :, channel] = fb[:n].reshape(h, w)
+        background[:, :, channel] = fb[n:].reshape(h, w)
+    
     foreground = np.clip(foreground, 0, 1)
     background = np.clip(background, 0, 1)
-
+    
     return foreground, background
+
+def estimate_fb_ml(
+    input_image,
+    input_alpha,
+    min_size = 2,
+    growth_factor = 2,
+    regularization = 1e-5,
+    n_iter_func = lambda w,h: 5 if max(w, h) <= 64 else 1,
+    print_info = False,
+):
+    """
+    Estimate foreground and background of an image using a multilevel
+    approach.
+    
+    min_size: int > 0
+        Minimum image size at which to start solving.
+    
+    growth_factor: float64 > 1.0
+        Image size is increased by growth_factor each level.
+    
+    regularization: float64
+        Smoothing factor for undefined foreground/background regions.
+    
+    n_iter_func: func(width: int, height: int) -> int
+        How many iterations to perform at a given image size.
+    
+    print_info:
+        Wheter to print debug information during iterations.
+    
+    Returns
+    -------
+    
+    F: np.ndarray of dtype np.float64
+        Foreground image.
+    
+    B: np.ndarray of dtype np.float64
+        Background image.
+    """
+    
+    assert(min_size >= 1)
+    assert(growth_factor > 1.0)
+    h0,w0 = input_image.shape[:2]
+    
+    if print_info:
+        print("Solving for foreground and background using multilevel method")
+    
+    # Find initial image size.
+    if w0 < h0:
+        w = min_size
+        h = int(min_size*h0/w0)
+    else:
+        w = int(min_size*w0/h0)
+        h = min_size
+    
+    if print_info:
+        print("Initial size: %d-by-%d"%(w, h))
+    
+    # Generate initial foreground and background from input image
+    F = resize_nearest(input_image, w, h)
+    B = F.copy()
+    
+    while True:
+        if print_info:
+            print("New level of size: %d-by-%d"%(w, h))
+        
+        # Resize image and alpha to size of current level
+        image = resize_nearest(input_image, w, h)
+        alpha = resize_nearest(input_alpha, w, h)
+        
+        # Iterate a few times
+        n_iter = n_iter_func(w, h)
+        for iteration in range(n_iter):
+            if print_info:
+                print("Iteration %d of %d"%(iteration + 1, n_iter))
+            
+            x,y = pixel_coordinates(w, h, flat=True)
+            
+            # Make alpha into a vector
+            a = alpha.reshape(w*h)
+            
+            # Build system of linear equations
+            A = np.stack([a, 1 - a], axis=1)
+            mat = vec_vec_outer(A, A)
+            rhs = vec_vec_outer(A, image.reshape(w*h, 3))
+        
+            # For each neighbor
+            for dx,dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                x2 = np.clip(x + dx, 0, w - 1)
+                y2 = np.clip(y + dy, 0, h - 1)
+                
+                # Vectorized neighbor coordinates
+                j = x2 + y2*w
+                
+                # Gradient of alpha
+                da = regularization + np.abs(a - a[j])
+                
+                # Update matrix of linear equation system
+                mat[:, 0, 0] += da
+                mat[:, 1, 1] += da
+                
+                # Update rhs of linear equation system
+                rhs[:, 0, :] += da.reshape(w*h, 1) * F.reshape(w*h, 3)[j]
+                rhs[:, 1, :] += da.reshape(w*h, 1) * B.reshape(w*h, 3)[j]
+            
+            # Solve linear equation system for foreground and background
+            fb = np.clip(np.matmul(inv2(mat), rhs), 0, 1)
+            
+            F = fb[:, 0, :].reshape(h, w, 3)
+            B = fb[:, 1, :].reshape(h, w, 3)
+        
+        # If original image size is reached, return result
+        if w >= w0 and h >= h0: return F, B
+        
+        # Grow image size to next level
+        w = min(w0, int(w*growth_factor))
+        h = min(h0, int(h*growth_factor))
+        
+        F = resize_nearest(F, w, h)
+        B = resize_nearest(B, w, h)
 
 def estimate_foreground_background(
     image,
     alpha,
-    method="cf",
+    method="ml",
     **kwargs
 ):
     if method == "cf":
-        return estimate_foreground_background_cf(image, alpha, **kwargs)
-    elif method == "sampling":
-        return estimate_foreground_background_sampling(image, alpha, **kwargs)
+        return estimate_fb_cf(image, alpha, **kwargs)
+    elif method == "ml":
+        return estimate_fb_ml(image, alpha, **kwargs)
     else:
         raise Exception("Invalid method %s: expected either cf or sampling"%method)
     

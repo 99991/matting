@@ -11,8 +11,8 @@ trimap = load_image(trimap_path, "GRAY")
 
 alpha = alpha_matting(image, trimap, method="ifm", print_info=True)
 
-method = "sampling"
 method = "cf"
+method = "ml"
 
 foreground, background = estimate_foreground_background(
     image, alpha, method=method, print_info=True)

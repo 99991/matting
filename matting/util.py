@@ -140,6 +140,118 @@ def blend(foreground, background, alpha):
     alpha = alpha[:, :, np.newaxis]
     return foreground*alpha + (1 - alpha)*background
 
+def pixel_coordinates(w, h, flat=False):
+    x = np.arange(w)
+    y = np.arange(h)
+    x,y = np.meshgrid(x, y)
+    
+    if flat:
+        x = x.flatten()
+        y = y.flatten()
+    
+    return x, y
+
+def sparse_conv_matrix(w, h, dx, dy, weights):
+    count = len(weights)
+    n = w*h
+    
+    i_inds = np.zeros(n*count, dtype=np.int32)
+    j_inds = np.zeros(n*count, dtype=np.int32)
+    values = np.zeros(n*count, dtype=np.float64)
+    
+    k = 0
+    x,y = pixel_coordinates(w, h, flat=True)
+    for dx2, dy2,weight in zip(dx, dy, weights):
+        x2 = np.clip(x + dx2, 0, w - 1)
+        y2 = np.clip(y + dy2, 0, h - 1)
+        i_inds[k:k+n] = x + y*w
+        j_inds[k:k+n] = x2 + y2*w
+        values[k:k+n] = weight
+        k += n
+    
+    A = scipy.sparse.csr_matrix((values, (i_inds, j_inds)), shape=(n, n))
+    
+    return A
+
+def uniform_laplacian(w, h, r):
+    size = 2*r + 1
+    x,y = pixel_coordinates(size, size, flat=True)
+    
+    W = sparse_conv_matrix(w, h, x - r, y - r, np.ones(size*size))
+
+    d = np.array(W.sum(axis=1)).flatten()
+    D = scipy.sparse.diags(d)
+    
+    L = D - W
+    
+    return L
+
+def resize_nearest(image, new_width, new_height):
+    old_height, old_width = image.shape[:2]
+    
+    x,y = pixel_coordinates(new_width, new_height)
+    x = np.minimum(x*old_width // new_width, old_width - 1)
+    y = np.minimum(y*old_height//new_height, old_height - 1)
+    
+    if len(image.shape) == 3:
+        image = image.reshape(old_width*old_height, image.shape[2])
+    else:
+        image = image.reshape(old_width*old_height)
+    
+    new_image = image[x + y*old_width]
+    
+    return new_image
+
+def inv2(mat):
+    a = mat[..., 0, 0]
+    b = mat[..., 0, 1]
+    c = mat[..., 1, 0]
+    d = mat[..., 1, 1]
+    
+    inv_det = 1 / (a*d - b*c)
+    
+    inv = np.empty(mat.shape)
+
+    inv[..., 0, 0] = inv_det*d
+    inv[..., 0, 1] = inv_det*-b
+    inv[..., 1, 0] = inv_det*-c
+    inv[..., 1, 1] = inv_det*a
+
+    return inv
+
+def lstsq(A, b, num_iterations=1000, tolerance=1e-10, print_info=False):
+    x = np.zeros(A.shape[1])
+
+    AT = A.T
+    b = AT.dot(b)
+
+    residual = b - AT.dot(A.dot(x))
+    p = residual
+    residual_old = np.sum(residual**2)
+
+    for i in range(num_iterations):
+        q = AT.dot(A.dot(p))
+        alpha = residual_old / np.sum(p*q)
+
+        x += alpha*p
+        residual -= alpha*q
+        
+        residual_new = np.inner(residual, residual)
+
+        if print_info:
+            print("%05d/%05d - %e"%(i, num_iterations, residual_new))
+
+        if residual_new < tolerance:
+            if print_info:
+                print("break after %d iterations"%i)
+            break
+
+        p = residual + residual_new/residual_old * p
+        
+        residual_old = residual_new
+    
+    return x
+
 def solve_cg(
     A,
     b,

@@ -25,7 +25,7 @@ def alpha_matting(
     x0=None,
     print_info=False,
 ):
-    """
+    r"""
     Propagates approximate alpha values of trimap into unknown regions
     based on image color.
     A system of linear equations is assembled and then solved with

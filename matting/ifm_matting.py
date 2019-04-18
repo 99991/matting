@@ -23,7 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                                               #
 ############################################################################################
 
-"""
+r"""
 The information flow alpha matting method is provided for academic use only.
 If you use the information flow alpha matting method for an academic
 publication, please cite corresponding publications referenced in the
