@@ -1,5 +1,5 @@
 from .util import solve_cg, vec_vec_outer, pixel_coordinates, inv2
-from .util import resize_nearest, sparse_conv_matrix, uniform_laplacian
+from .util import resize_nearest, sparse_conv_matrix
 from .ichol import ichol, ichol_solve
 import numpy as np
 import scipy.sparse
@@ -9,6 +9,7 @@ def estimate_fb_cf(
     alpha,
     ichol_threshold = 1e-4,
     regularization = 1e-5,
+    neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)],
     print_info = False,
 ):
     """
@@ -45,31 +46,22 @@ def estimate_fb_cf(
     a = alpha.flatten()
     
     # Build sparse linear equation system
-    AF = scipy.sparse.diags(a)
-    AB = scipy.sparse.diags(1 - a)
-    AA = scipy.sparse.bmat([[AF, AB]])
+    U = scipy.sparse.bmat([[
+        scipy.sparse.diags(a),
+        scipy.sparse.diags(1 - a)]])
     
-    Dx = sparse_conv_matrix(w, h, [1, 0], [0, 0], [0.5, -0.5])
-    Dy = sparse_conv_matrix(w, h, [0, 0], [1, 0], [0.5, -0.5])
+    # Directional derivative matrices
+    Ds = [sparse_conv_matrix(w, h, [0, dx], [0, dy], [1.0, -1.0])
+        for dx,dy in neighbors]
     
-    Dax = scipy.sparse.diags(np.abs(Dx @ a))
-    Day = scipy.sparse.diags(np.abs(Dy @ a))
+    S = sum(D.T @ scipy.sparse.diags(regularization + np.abs(D @ a)) @ D
+        for D in Ds)
     
-    Dxy = Dx.T @ Dax @ Dx + Dy.T @ Day @ Dy
+    V = scipy.sparse.bmat([
+        [S, None],
+        [None, S]])
     
-    Dxy2 = scipy.sparse.bmat([
-        [Dxy, None],
-        [None, Dxy],
-    ])
-    
-    L = uniform_laplacian(w, h, 1)
-    
-    AD = Dxy + regularization*L
-    
-    A = scipy.sparse.bmat([
-        [AF*AF + AD, AF*AB],
-        [AF*AB, AB*AB + AD],
-    ]).tocsc()
+    A = (U.T @ U + V).tocsc()
     
     if print_info:
         print("computing incomplete Cholesky decomposition")
@@ -94,7 +86,7 @@ def estimate_fb_cf(
         
         I = image[:, :, channel].flatten()
         
-        b = AA.T @ I
+        b = U.T @ I
         
         # Solve large sparse linear equation system
         fb = solve_cg(A, b, precondition=precondition, max_iter=10000, atol=1e-6, rtol=0, print_info=print_info)
@@ -237,5 +229,5 @@ def estimate_foreground_background(
     elif method == "ml":
         return estimate_fb_ml(image, alpha, **kwargs)
     else:
-        raise Exception("Invalid method %s: expected either cf or sampling"%method)
+        raise Exception("Invalid method %s: expected either cf or ml"%method)
     
