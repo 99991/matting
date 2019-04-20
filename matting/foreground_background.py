@@ -10,6 +10,9 @@ def estimate_fb_cf(
     ichol_threshold = 1e-4,
     regularization = 1e-5,
     neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)],
+    max_iter=1000,
+    atol=1e-6,
+    rtol=0.0,
     print_info = False,
 ):
     """
@@ -38,6 +41,9 @@ def estimate_fb_cf(
     
     background: np.ndarray of dtype np.float64
         Background image.
+    
+    max_iter, atol, rtol: np.float64
+        see documentation of util.solve_cg
     """
     
     h,w = image.shape[:2]
@@ -89,7 +95,7 @@ def estimate_fb_cf(
         b = U.T @ I
         
         # Solve large sparse linear equation system
-        fb = solve_cg(A, b, precondition=precondition, max_iter=10000, atol=1e-6, rtol=0, print_info=print_info)
+        fb = solve_cg(A, b, precondition=precondition, max_iter=max_iter, atol=atol, rtol=rtol, print_info=print_info)
         
         foreground[:, :, channel] = fb[:n].reshape(h, w)
         background[:, :, channel] = fb[n:].reshape(h, w)
