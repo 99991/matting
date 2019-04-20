@@ -185,9 +185,9 @@ def estimate_fb_ml(
             a = alpha.reshape(w*h)
             
             # Build system of linear equations
-            A = np.stack([a, 1 - a], axis=1)
-            mat = vec_vec_outer(A, A)
-            rhs = vec_vec_outer(A, image.reshape(w*h, 3))
+            U = np.stack([a, 1 - a], axis=1)
+            A = vec_vec_outer(U, U)
+            b = vec_vec_outer(U, image.reshape(w*h, 3))
         
             # For each neighbor
             for dx,dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -201,15 +201,15 @@ def estimate_fb_ml(
                 da = regularization + np.abs(a - a[j])
                 
                 # Update matrix of linear equation system
-                mat[:, 0, 0] += da
-                mat[:, 1, 1] += da
+                A[:, 0, 0] += da
+                A[:, 1, 1] += da
                 
                 # Update rhs of linear equation system
-                rhs[:, 0, :] += da.reshape(w*h, 1) * F.reshape(w*h, 3)[j]
-                rhs[:, 1, :] += da.reshape(w*h, 1) * B.reshape(w*h, 3)[j]
+                b[:, 0, :] += da.reshape(w*h, 1) * F.reshape(w*h, 3)[j]
+                b[:, 1, :] += da.reshape(w*h, 1) * B.reshape(w*h, 3)[j]
             
             # Solve linear equation system for foreground and background
-            fb = np.clip(np.matmul(inv2(mat), rhs), 0, 1)
+            fb = np.clip(np.matmul(inv2(A), b), 0, 1)
             
             F = fb[:, 0, :].reshape(h, w, 3)
             B = fb[:, 1, :].reshape(h, w, 3)
