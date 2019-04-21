@@ -219,8 +219,8 @@ def estimate_fb_ml(
         if w >= w0 and h >= h0: return F, B
         
         # Grow image size to next level
-        w = min(w0, int(w*growth_factor))
-        h = min(h0, int(h*growth_factor))
+        w = min(w0, int(np.ceil(w*growth_factor)))
+        h = min(h0, int(np.ceil(h*growth_factor)))
         
         F = resize_nearest(F, w, h)
         B = resize_nearest(B, w, h)
