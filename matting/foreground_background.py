@@ -153,9 +153,10 @@ def estimate_fb_ml(
     # Find initial image size.
     if w0 < h0:
         w = min_size
-        h = int(min_size*h0/w0)
+        # ceil rounding one level faster sometimes
+        h = int(np.ceil(min_size*h0/w0))
     else:
-        w = int(min_size*w0/h0)
+        w = int(np.ceil(min_size*w0/h0))
         h = min_size
     
     if print_info:
