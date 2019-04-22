@@ -19,8 +19,8 @@ def alpha_matting(
     lambd=100.0,
     epsilon=1e-7,
     max_iterations=2000,
-    relative_tolerance=1e-6,
-    absolute_tolerance=0.0,
+    relative_tolerance=None,
+    absolute_tolerance=None,
     callback=None,
     x0=None,
     print_info=False,
@@ -116,10 +116,14 @@ def alpha_matting(
         Maximum number of iterations of conjugate gradient descent.
     relative_tolerance: float64
         Conjugate gradient descent will stop when
-        norm(A x - b) < relative_tolerance norm(b)
+        norm(A x - b) < relative_tolerance norm(b).
+        If either relative_tolerance or absolute_tolerance is None,
+        the other is set to 0.0.
     absolute_tolerance: float64
         Conjugate gradient descent will stop when
-        norm(A x - b) < absolute_tolerance
+        norm(A x - b) < absolute_tolerance.
+        The default value is
+        0.1/(width * height).
     callback: func(A, x, b)
         callback to inspect temporary result after each iteration.
     x0: np.ndarray of dtype np.float64
@@ -140,6 +144,16 @@ def alpha_matting(
     assert(image.shape[:2] == trimap.shape)
     assert(0 <= image.min() and image.max() <= 1)
     assert(0 <= trimap.min() and trimap.max() <= 1)
+    
+    if relative_tolerance is None:
+        if absolute_tolerance is None:
+            relative_tolerance = 0.0
+            absolute_tolerance = 0.1/(image.shape[0] * image.shape[1])
+        else:
+            relative_tolerance = 0.0
+    else:
+        if absolute_tolerance is None:
+            absolute_tolerance = 0.0
     
     methods = ["cf", "knn", "lkm", "ifm", "vcycle"]
     
