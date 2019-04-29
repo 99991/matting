@@ -189,18 +189,58 @@ def uniform_laplacian(w, h, r):
 def resize_nearest(image, new_width, new_height):
     old_height, old_width = image.shape[:2]
     
-    x,y = pixel_coordinates(new_width, new_height)
-    x = np.minimum(x*old_width // new_width, old_width - 1)
-    y = np.minimum(y*old_height//new_height, old_height - 1)
+    x = np.arange(new_width )[np.newaxis, :]
+    y = np.arange(new_height)[:, np.newaxis]
+    x = x*old_width /new_width
+    y = y*old_height/new_height
+    x = np.clip(x.astype(np.int32), 0, old_width  - 1)
+    y = np.clip(y.astype(np.int32), 0, old_height - 1)
     
     if len(image.shape) == 3:
-        image = image.reshape(old_width*old_height, image.shape[2])
+        image = image.reshape(-1, image.shape[2])
     else:
-        image = image.reshape(old_width*old_height)
+        image = image.ravel()
     
-    new_image = image[x + y*old_width]
+    return image[x + y*old_width]
+
+def resize_bilinear(image, new_width, new_height):
+    old_height, old_width = image.shape[:2]
     
-    return new_image
+    x2 = old_width /new_width *(np.arange(new_width ) + 0.5) - 0.5
+    y2 = old_height/new_height*(np.arange(new_height) + 0.5) - 0.5
+    
+    x2 = x2[np.newaxis, :]
+    y2 = y2[:, np.newaxis]
+    
+    x0 = np.floor(x2)
+    y0 = np.floor(y2)
+    
+    ux = x2 - x0
+    uy = y2 - y0
+    
+    x0 = x0.astype(np.int32)
+    y0 = y0.astype(np.int32)
+    
+    x1 = x0 + 1
+    y1 = y0 + 1
+    
+    x0 = np.clip(x0, 0, old_width - 1)
+    x1 = np.clip(x1, 0, old_width - 1)
+    
+    y0 = np.clip(y0, 0, old_height - 1)
+    y1 = np.clip(y1, 0, old_height - 1)
+    
+    if len(image.shape) == 3:
+        pix = image.reshape(-1, image.shape[2])
+        ux = ux[..., np.newaxis]
+        uy = uy[..., np.newaxis]
+    else:
+        pix = image.ravel()
+    
+    a = (1 - ux)*pix[y0*old_width + x0] + ux*pix[y0*old_width + x1]
+    b = (1 - ux)*pix[y1*old_width + x0] + ux*pix[y1*old_width + x1]
+    
+    return (1 - uy)*a + uy*b
 
 def inv2(mat):
     a = mat[..., 0, 0]
