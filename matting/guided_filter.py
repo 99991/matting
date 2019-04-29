@@ -29,21 +29,24 @@ def guided_filter(I, p, r, eps=1e-4):
     
     return ((blur_full(a, r)*I).sum(axis=2) + blur_full(b, r))/c
 
-def fast_guided_filter(I0, p0, r0, eps=1e-4, scale=0.125):
-    h0,w0 = I0.shape[:2]
+def fast_guided_filter(I, p, r, eps=1e-4, scale=0.125):
+    h,w = I.shape[:2]
     
-    r = int(r0*scale)
-    w = int(w0*scale)
-    h = int(h0*scale)
+    r_small = int(r*scale)
+    w_small = int(w*scale)
+    h_small = int(h*scale)
     
-    I = resize_nearest(I0, w, h)
-    p = resize_nearest(p0, w, h)
+    I_small = resize_nearest(I, w_small, h_small)
+    p_small = resize_nearest(p, w_small, h_small)
     
-    a,b = local_model(I, p, r, eps)
+    a_small,b_small = local_model(I_small, p_small, r_small, eps)
     
-    a = resize_bilinear(a, w0 - 2*r0, h0 - 2*r0)
-    b = resize_bilinear(b, w0 - 2*r0, h0 - 2*r0)
-
-    c = blur_full(np.ones_like(b), r0)
+    mean_a_small = blur_full(a_small, r_small)
+    mean_b_small = blur_full(b_small, r_small)
+    c            = blur_full(np.ones_like(b_small), r_small)
     
-    return ((blur_full(a, r0)*I0).sum(axis=2) + blur_full(b, r0))/c
+    mean_a = resize_bilinear(mean_a_small, w, h)
+    mean_b = resize_bilinear(mean_b_small, w, h)
+    c      = resize_bilinear(           c, w, h)
+    
+    return ((mean_a*I).sum(axis=2) + mean_b) / c
