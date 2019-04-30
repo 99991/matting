@@ -8,11 +8,20 @@ from .vcycle import vcycle
 import numpy as np
 import scipy.sparse.linalg
 
+METHODS = ["cf", "knn", "lkm", "ifm"]
+
+PRECONDITIONERS = {
+    "cf" : [None, "jacobi", "vcycle", "ichol"],
+    "knn": [None, "jacobi", "vcycle", "ichol"],
+    "ifm": [None, "jacobi", "vcycle"],
+    "lkm": [None, "jacobi"],
+}
+
 def alpha_matting(
     image,
     trimap,
-    method="vcycle",
-    cf_preconditioner="ichol",
+    method="cf",
+    preconditioner="vcycle",
     ichol_regularization=0.0,
     ichol_threshold=1e-4,
     lkm_radius=10,
@@ -90,11 +99,12 @@ def alpha_matting(
             "lkm"
             "ifm"
             "vcycle"
-    cf_preconditioner: string
+    preconditioner: string
         Possible preconditioners are:
             None
             "jacobi"
             "ichol"
+            "vcycle"
     ichol_regularization: float64
         Increase to increase probability that incomplete
         Cholesky decomposition can be built successfully.
@@ -155,67 +165,25 @@ def alpha_matting(
         if absolute_tolerance is None:
             absolute_tolerance = 0.0
     
-    methods = ["cf", "knn", "lkm", "ifm", "vcycle"]
+    if method == "lkm" and preconditioner not in [None, "jacobi"]:
+        raise ValueError('Only None or "jacobi" preconditioner are supported for lkm matting')
+    
+    if print_info:
+        print("Alpha matting with method %s and preconditioner %s"%(
+            method, preconditioner))
+        
+        print("Building Laplacian matrix")
     
     if method == "cf":
         L = closed_form_laplacian(image, epsilon)
         
         A, b = make_system(L, trimap, lambd)
         
-        if cf_preconditioner is None:
-            def precondition(r):
-                return r
-        
-        elif cf_preconditioner == "ichol":
-            params = [
-                (ichol_regularization, ichol_threshold),
-                (1e-4, 1e-4),
-                (0.0, 1e-5),
-                (1e-4, 1e-5),
-                (0.0, 0.0),
-            ]
-            
-            for ichol_regularization, ichol_threshold in params:
-                try:
-                    A_regularized = A if ichol_regularization == 0.0 else \
-                        A + ichol_regularization*scipy.sparse.identity(A.shape[0])
-                    
-                    L = ichol(A_regularized.tocsc(), ichol_threshold)
-                    break
-                except ValueError as e:
-                    print("""WARNING:
-Incomplete Cholesky decomposition failed (%s) with:
-    ichol_regularization = %f
-    ichol_threshold = %f
-    
-A smaller value for ichol_threshold might help if sufficient memory is available.
-A larger value for ichol_threshold might help if more time is available.
-
-See help of matting_closed_form for more info.
-"""%(e, ichol_regularization, ichol_threshold))
-            
-            def precondition(r):
-                return ichol_solve(L, r)
-        
-        elif cf_preconditioner == "jacobi":
-            inv_diag = 1/A.diagonal()
-            
-            def precondition(r):
-                return r * inv_diag
-
-        else:
-            raise ValueError('cf_preconditioner must be None, "jacobi" or "ichol", but not %s'%cf_preconditioner)
-
     elif method == "knn":
         L = knn_laplacian(image)
         
         A, b = make_system(L, trimap, lambd)
         
-        inv_diag_A = 1/A.diagonal()
-        
-        def precondition(r):
-            return r * inv_diag_A
-    
     elif method == "lkm":
         L, L_diag = make_lkm_operators(
             image,
@@ -238,30 +206,73 @@ See help of matting_closed_form for more info.
         
         b = lambd*is_fg.astype(np.float64)
         
-        def precondition(r):
+        def lkm_jacobi_precondition(r):
             return r * inv_A_diag
     
     elif method == "ifm":
         A,b = ifm_system(image, trimap)
-        
+    
+    else:
+        raise ValueError("Invalid matting method: %s\nValid methods are:\n%s"%(
+            method, METHODS))
+    
+    if print_info:
+        print("Building preconditioner")
+    
+    if preconditioner is None:
         def precondition(r):
             return r
     
-    elif method == "vcycle":
+    elif preconditioner == "ichol":
+        params = [
+            (ichol_regularization, ichol_threshold),
+            (1e-4, 1e-4),
+            (0.0, 1e-5),
+            (1e-4, 1e-5),
+            (0.0, 0.0),
+        ]
+        
+        for ichol_regularization, ichol_threshold in params:
+            try:
+                A_regularized = A if ichol_regularization == 0.0 else \
+                    A + ichol_regularization*scipy.sparse.identity(A.shape[0])
+                
+                L = ichol(A_regularized.tocsc(), ichol_threshold)
+                break
+            except ValueError as e:
+                print("""WARNING:
+Incomplete Cholesky decomposition failed (%s) with:
+ichol_regularization = %f
+ichol_threshold = %f
+
+A smaller value for ichol_threshold might help if sufficient memory is available.
+A larger value for ichol_threshold might help if more time is available.
+
+See help of matting_closed_form for more info.
+"""%(e, ichol_regularization, ichol_threshold))
+        
+        def precondition(r):
+            return ichol_solve(L, r)
+    
+    elif preconditioner == "jacobi":
+        if method == "lkm":
+            precondition = lkm_jacobi_precondition
+        else:
+            inv_diag = 1/A.diagonal()
+        
+            def precondition(r):
+                return r * inv_diag
+
+    elif preconditioner == "vcycle":
         cache = {}
         
-        L = closed_form_laplacian(image, epsilon)
-        
-        A, b = make_system(L, trimap, lambd)
-
         def precondition(r):
             return vcycle(A, r, trimap.shape, cache)
 
     else:
-        raise ValueError("Invalid matting method: %s\nValid methods are:\n%s"%(
-            method,
-            "\n".join("    " + method for method in methods)))
-    
+        raise ValueError('Invalid preconditioner %s\nValid preconditioners are: %s'%(
+            preconditioner, PRECONDITIONERS))
+
     x = solve_cg(
         A,
         b,

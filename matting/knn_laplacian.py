@@ -384,7 +384,7 @@ from .knn import knn
 import numpy as np
 import scipy.sparse
 
-def knn_laplacian(image, normalize=True):
+def knn_laplacian(image, normalize=False):
     # build knn laplacian from image using nearest neighbor information
     h,w,depth = image.shape
     n = h*w

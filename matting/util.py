@@ -140,6 +140,12 @@ def blend(foreground, background, alpha):
     alpha = alpha[:, :, np.newaxis]
     return foreground*alpha + (1 - alpha)*background
 
+def stack_images(*images):
+    return np.concatenate([
+        (image if len(image.shape) == 3 else image[:, :, np.newaxis])
+        for image in images
+    ], axis=2)
+
 def pixel_coordinates(w, h, flat=False):
     x = np.arange(w)
     y = np.arange(h)
