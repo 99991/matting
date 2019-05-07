@@ -28,7 +28,8 @@ git clone https://github.com/99991/matting.git
 cd matting
 python setup.py install
 cd examples
-python plant_example.py
+python simple_example.py
+python advances_example.py
 ```
 
 Replace `python` with `python3` if that is not your default.
@@ -51,6 +52,8 @@ Install XCode through the App store.
 
 # Simple Example
 
+The example files can also be found at  can be found at [https://github.com/99991/matting/tree/master/examples](https://github.com/99991/matting/tree/master/examples).
+
 ```python
 from matting import alpha_matting, load_image, save_image, estimate_foreground_background, stack_images
 
@@ -66,9 +69,7 @@ cutout = stack_images(foreground, alpha)
 save_image("out/plant_cutout.png", cutout)
 ```
 
-# Extended Example
-
-This example and the corresponding images can be found at `examples/extended_example.py`.
+# Advanced Example
 
 ```python
 from matting import alpha_matting, load_image, save_image, stack_images\
