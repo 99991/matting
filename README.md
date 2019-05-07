@@ -29,7 +29,7 @@ cd matting
 python setup.py install
 cd examples
 python simple_example.py
-python advances_example.py
+python advanced_example.py
 ```
 
 Replace `python` with `python3` if that is not your default.
