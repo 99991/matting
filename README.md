@@ -19,6 +19,25 @@
     </tr>
 </table>
 
+# Simple Example
+
+```python
+from matting import alpha_matting, load_image, save_image, estimate_foreground_background, stack_images
+
+image  = load_image("plant_image.jpg", "RGB")
+trimap = load_image("plant_trimap.png", "GRAY")
+
+alpha = alpha_matting(image, trimap, method="ifm", preconditioner="jacobi", print_info=True)
+
+foreground, background = estimate_foreground_background(image, alpha, print_info=True)
+
+cutout = stack_images(foreground, alpha)
+
+save_image("out/plant_cutout.png", cutout)
+```
+
+The example files can also be found at [https://github.com/99991/matting/tree/master/examples](https://github.com/99991/matting/tree/master/examples).
+
 # Install
 
 Install a C compiler (if you want to use alpha matting methods other than vcycle) and then run:
@@ -49,25 +68,6 @@ sudo apt-get install build-essential
 ### Mac
 
 Install XCode through the App store.
-
-# Simple Example
-
-The example files can also be found at  can be found at [https://github.com/99991/matting/tree/master/examples](https://github.com/99991/matting/tree/master/examples).
-
-```python
-from matting import alpha_matting, load_image, save_image, estimate_foreground_background, stack_images
-
-image  = load_image("plant_image.jpg", "RGB")
-trimap = load_image("plant_trimap.png", "GRAY")
-
-alpha = alpha_matting(image, trimap, method="ifm", preconditioner="jacobi", print_info=True)
-
-foreground, background = estimate_foreground_background(image, alpha, print_info=True)
-
-cutout = stack_images(foreground, alpha)
-
-save_image("out/plant_cutout.png", cutout)
-```
 
 # Advanced Example
 
