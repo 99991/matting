@@ -46,17 +46,6 @@ def save_image(path, image):
     image = PIL.Image.fromarray(image)
     image.save(path)
 
-def trimap_split(trimap, flatten=True):
-    if flatten:
-        trimap = trimap.flatten()
-    
-    is_fg = (trimap == 1.0)
-    is_bg = (trimap == 0.0)
-    is_known = np.logical_or(is_fg, is_bg)
-    is_unknown = np.logical_not(is_known)
-    
-    return is_fg, is_bg, is_known, is_unknown
-
 def weights_to_laplacian(W, normalize=True):
     if normalize:
         # normalize row sum to 1
@@ -112,9 +101,13 @@ def make_windows(image, radius=1):
             for y in range(2*radius+1)
         ], axis=2)
 
-def trimap_split(trimap):
-    is_fg = (trimap == 1.0).flatten()
-    is_bg = (trimap == 0.0).flatten()
+def trimap_split(trimap, flatten=True):
+    if flatten:
+        trimap = trimap.flatten()
+    
+    is_fg = (trimap == 1.0)
+    is_bg = (trimap == 0.0)
+    
     is_known = is_fg | is_bg
     is_unknown = ~is_known
     
