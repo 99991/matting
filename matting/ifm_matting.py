@@ -30,10 +30,10 @@ publication, please cite corresponding publications referenced in the
 description of each function:
 
 @INPROCEEDINGS{ifm,
-author={Aksoy, Ya\u{g}{\i}z and Ayd{\i}n, Tun\c{c} Ozan and Pollefeys, Marc}, 
-booktitle={Proc. CVPR}, 
-title={Designing Effective Inter-Pixel Information Flow for Natural Image Matting}, 
-year={2017}, 
+author={Aksoy, Ya\u{g}{\i}z and Ayd{\i}n, Tun\c{c} Ozan and Pollefeys, Marc},
+booktitle={Proc. CVPR},
+title={Designing Effective Inter-Pixel Information Flow for Natural Image Matting},
+year={2017},
 }
 """
 
@@ -67,32 +67,37 @@ _label_expand.argtypes = [
 
 np.random.seed(0)
 
+
 def mul_vec_mat_vec(v, A, w):
     # calculates v' A w
     return np.einsum("...i,...ij,...j->...", v, A, w)
+
 
 def mul_mat_mat_matT(A, B, C):
     # calculates A B C.T
     return np.einsum("...ij,...jk,...lk->...il", A, B, C)
 
+
 def mul_matT_mat(A, B):
     # calculates A.T B
     return np.einsum("...ji,...jk->...ik", A, B)
+
 
 def mul_mat_matT(A, B):
     # calculates A B.T
     return np.einsum("...ij,...kj->...ik", A, B)
 
+
 def boxfilter(image, r, mode='full', fill_value=0.0):
     height, width = image.shape[:2]
-    size = 2*r + 1
-    
+    size = 2 * r + 1
+
     pad = {
-        'full' : 2*r,
-        'valid':   0,
-        'same' :   r,
+        'full': 2 * r,
+        'valid': 0,
+        'same': r,
     }[mode]
-    
+
     shape = [1 + pad + height + pad, 1 + pad + width + pad] + list(image.shape[2:])
     image_padded = np.full(shape, fill_value, dtype=image.dtype)
     image_padded[1 + pad:1 + pad + height, 1 + pad:1 + pad + width] = image
@@ -104,8 +109,10 @@ def boxfilter(image, r, mode='full', fill_value=0.0):
 
     return c
 
+
 def imdilate(image, radius):
     return boxfilter(image, radius, 'same') > 0
+
 
 def make_windows_at(image, r, x, y):
     if len(image.shape) == 3:
@@ -122,6 +129,7 @@ def make_windows_at(image, r, x, y):
             for dx in range(-r, r + 1)
         ]).transpose(1, 0)
 
+
 def label_expand(image, rows, cols, r, w, h, knownReg, colorThresh, trimap, extendedTrimap):
     _label_expand(
         np.ctypeslib.as_ctypes(image.ravel()),
@@ -136,51 +144,54 @@ def label_expand(image, rows, cols, r, w, h, knownReg, colorThresh, trimap, exte
         np.ctypeslib.as_ctypes(trimap.ravel()),
         np.ctypeslib.as_ctypes(extendedTrimap.ravel()))
 
+
 def LabelExpansion(image, trimap, maxDist, colorThresh):
     fg = trimap > 0.8
     bg = trimap < 0.2
     not_fg = np.logical_not(fg)
     not_bg = np.logical_not(bg)
-      
+
     knownReg = np.logical_or(fg, bg)
 
     searchReg = np.logical_or(
         np.logical_and(imdilate(fg, maxDist), not_fg),
         np.logical_and(imdilate(bg, maxDist), not_bg))
 
-    h,w = trimap.shape
+    h, w = trimap.shape
     cols = np.arange(w)
     rows = np.arange(h)
     cols, rows = np.meshgrid(cols, rows)
-    
+
     cols = cols[searchReg]
     rows = rows[searchReg]
-    
+
     extendedTrimap = trimap.copy()
-    
+
     label_expand(image, rows, cols, maxDist, w, h, knownReg, colorThresh, trimap, extendedTrimap)
-    
+
     return extendedTrimap
 
+
 def trimmingFromKnownUnknownEdges(image, trimap):
-    for i, threshold in enumerate(np.linspace(8.11/256, 1/256, 9)):
+    for i, threshold in enumerate(np.linspace(8.11 / 256, 1 / 256, 9)):
         trimap = LabelExpansion(image, trimap, i + 1, threshold)
     return trimap
 
+
 def findNonlocalNeighbors(image, K, xyWeight=1.0, inMap=None, outMap=None):
-    h,w,c = image.shape
-    
+    h, w, c = image.shape
+
     if inMap is None:
-        inMap = np.ones((h,w), dtype=np.bool8)
-    
+        inMap = np.ones((h, w), dtype=np.bool8)
+
     if outMap is None:
-        outMap = np.ones((h,w), dtype=np.bool8)
-    
+        outMap = np.ones((h, w), dtype=np.bool8)
+
     if xyWeight > 0.0:
         x = np.arange(1, w + 1)
         y = np.arange(1, h + 1)
-        x,y = np.meshgrid(x, y)
-        
+        x, y = np.meshgrid(x, y)
+
         x = xyWeight * x.astype(np.float64) / w
         y = xyWeight * y.astype(np.float64) / h
 
@@ -198,130 +209,134 @@ def findNonlocalNeighbors(image, K, xyWeight=1.0, inMap=None, outMap=None):
             image[:, :, 2].flatten(),
         ], axis=1)
 
-    indices = np.arange(h*w)
-    
+    indices = np.arange(h * w)
+
     inMap = inMap.flatten()
     outMap = outMap.flatten()
-    
+
     inInd = indices[inMap]
     outInd = indices[outMap]
-    
+
     neighbors = knn(features[outMap], features[inMap], K)
-    
+
     neighInd = outInd[neighbors]
-    
+
     return inInd, neighInd, features
+
 
 def solve_for_weights(z, regularization_factor=1e-3):
     n, n_neighbors, _ = z.shape
-    
+
     # calculate covariance matrices
     C = mul_mat_matT(z, z)
 
     # regularization
-    C += regularization_factor*np.eye(n_neighbors)
+    C += regularization_factor * np.eye(n_neighbors)
 
     # solve for weights
     weights = np.linalg.solve(C, np.ones((n, n_neighbors)))
     # normalize rows
     weights /= weights.sum(axis=1, keepdims=True)
-    
+
     return weights
 
+
 def colorMixtureAffinities(image, K, inMap=None, outMap=None, xyWeight=1.0, useXYinLLEcomp=False):
-    h,w,c = image.shape
-    N = h*w
+    h, w, c = image.shape
+    N = h * w
 
     if inMap is None:
-        inMap = np.ones((h,w), dtype=np.bool8)
-    
+        inMap = np.ones((h, w), dtype=np.bool8)
+
     if outMap is None:
-        outMap = np.ones((h,w), dtype=np.bool8)
-    
+        outMap = np.ones((h, w), dtype=np.bool8)
+
     inInd, neighInd, features = findNonlocalNeighbors(image, K, xyWeight, inMap, outMap)
 
     if not useXYinLLEcomp:
         features = features[:, :-2]
-    
+
     inInd = np.repeat(inInd, K).reshape(-1, K)
     flows = solve_for_weights(features[inInd] - features[neighInd], regularization_factor=1e-10)
-    
+
     i = inInd.flatten()
     j = neighInd.flatten()
     v = flows.flatten()
-    
+
     W = scipy.sparse.csr_matrix((flows.flatten(), (inInd.flatten(), neighInd.flatten())), shape=(N, N))
-    
+
     return W
+
 
 def mattingAffinity(image, inMap, windowRadius, eps):
     height, width, depth = image.shape
-    n = height*width
-    
-    window_size = (2*windowRadius + 1)**2
-    
+    n = height * width
+
+    window_size = (2 * windowRadius + 1)**2
+
     # shape: h w 3
     means = make_windows(pad(image)).mean(axis=2)
     # shape: h w 9 3
     centered_neighbors = make_windows(pad(image)) - means.reshape(height, width, 1, depth)
     # shape: h w 3 3
-    covariance = mul_matT_mat(centered_neighbors, centered_neighbors)/window_size
+    covariance = mul_matT_mat(centered_neighbors, centered_neighbors) / window_size
 
-    inv_cov = np.linalg.inv(covariance + eps/window_size*np.eye(3, 3))
+    inv_cov = np.linalg.inv(covariance + eps / window_size * np.eye(3, 3))
 
-    indices = np.arange(width*height).reshape(height, width)
+    indices = np.arange(width * height).reshape(height, width)
     neighInd = make_windows(indices)
-    
+
     inMap = inMap[windowRadius:-windowRadius, windowRadius:-windowRadius]
-    
+
     neighInd = neighInd.reshape(-1, window_size)
-    
+
     neighInd = neighInd[inMap.flatten()]
-    
-    inInd = neighInd[:, window_size//2]
-    
+
+    inInd = neighInd[:, window_size // 2]
+
     image = image.reshape(-1, 3)
     means = means.reshape(-1, 3)
     inv_cov = inv_cov.reshape(-1, 3, 3)
-    
+
     centered_neighbors = image[neighInd] - means[inInd].reshape(-1, 1, 3)
-    
+
     weights = mul_mat_mat_matT(centered_neighbors, inv_cov[inInd], centered_neighbors)
-    
+
     flowCols = np.repeat(neighInd, window_size, axis=1).reshape(-1, window_size, window_size)
     flowRows = flowCols.transpose(0, 2, 1)
-    
-    weights = (weights + 1)/window_size
-    
+
+    weights = (weights + 1) / window_size
+
     flowRows = flowRows.flatten()
     flowCols = flowCols.flatten()
     weights = weights.flatten()
-    
+
     W = scipy.sparse.csc_matrix((weights, (flowRows, flowCols)), shape=(n, n))
-    
+
     W = W + W.T
-    
+
     W_row_sum = np.array(W.sum(axis=1)).flatten()
     W_row_sum[W_row_sum < 0.05] = 1.0
-    
-    return scipy.sparse.diags(1/W_row_sum).dot(W)
+
+    return scipy.sparse.diags(1 / W_row_sum).dot(W)
+
 
 def colorSimilarityAffinities(image, K, inMap=None, outMap=None, xyWeight=0.05):
-    h,w,c = image.shape
-    N = h*w
+    h, w, c = image.shape
+    N = h * w
 
     if inMap is None:
-        inMap = np.ones((h,w), dtype=np.bool8)
-    
+        inMap = np.ones((h, w), dtype=np.bool8)
+
     if outMap is None:
-        outMap = np.ones((h,w), dtype=np.bool8)
-    
+        outMap = np.ones((h, w), dtype=np.bool8)
+
     _, neighInd, _ = findNonlocalNeighbors(image, K, xyWeight, inMap, outMap)
 
-    # This behaviour below, decreasing the xy-weight and finding a new set of neighbors, is taken 
+    # This behaviour below, decreasing the xy-weight and finding a new set of neighbors, is taken
     # from the public implementation of KNN matting by Chen et al.
     inInd, neighInd2, features = findNonlocalNeighbors(image, int(np.ceil(K / 5)), xyWeight / 100, inMap, outMap)
-    
+
     neighInd = np.concatenate([neighInd, neighInd2], axis=1)
     features[-2:] /= 100.0
 
@@ -330,23 +345,25 @@ def colorSimilarityAffinities(image, K, inMap=None, outMap=None, xyWeight=0.05):
     flows[flows < 0] = 0
 
     W = scipy.sparse.csr_matrix((flows.flatten(), (inInd.flatten(), neighInd.flatten())), shape=(N, N))
-    
-    W = 0.5*(W + W.T)
-    
+
+    W = 0.5 * (W + W.T)
+
     return W
+
 
 def affinityMatrixToLaplacian(A):
     return weights_to_laplacian(A, normalize=False)
+
 
 def patchBasedTrimming(image, trimap, minDist, maxDist, windowRadius, K):
     is_fg = trimap > 0.8
     is_bg = trimap < 0.2
     is_known = np.logical_or(is_fg, is_bg)
     is_unknown = np.logical_not(is_known)
-    
+
     trimap = trimap.copy()
-    height,width,depth = image.shape
-    
+    height, width, depth = image.shape
+
     eps = 1e-8
 
     # shape: h w 3
@@ -354,83 +371,85 @@ def patchBasedTrimming(image, trimap, minDist, maxDist, windowRadius, K):
     # shape: h w 9 3
     centered_neighbors = make_windows(pad(image)) - means.reshape(height, width, 1, depth)
     # shape: h w 3 3
-    covariance = mul_matT_mat(centered_neighbors, centered_neighbors)/(3*3) \
-        + eps/(3*3)*np.eye(3, 3)
-    
-    unkInd, fgNeigh,_ = findNonlocalNeighbors(means, K, -1, is_unknown, is_fg)
-    _, bgNeigh,_ = findNonlocalNeighbors(means, K, -1, is_unknown, is_bg)
-    
-    meanImage = means.transpose(0, 1, 2).reshape(height*width, depth)
-    
-    covariance = covariance.transpose(0, 1, 2, 3).reshape(width*height, 3, 3)
-    
+    covariance = mul_matT_mat(centered_neighbors, centered_neighbors) / (3 * 3) \
+        + eps / (3 * 3) * np.eye(3, 3)
+
+    unkInd, fgNeigh, _ = findNonlocalNeighbors(means, K, -1, is_unknown, is_fg)
+    _, bgNeigh, _ = findNonlocalNeighbors(means, K, -1, is_unknown, is_bg)
+
+    meanImage = means.transpose(0, 1, 2).reshape(height * width, depth)
+
+    covariance = covariance.transpose(0, 1, 2, 3).reshape(width * height, 3, 3)
+
     pixMeans = meanImage[unkInd]
     pixCovars = covariance[unkInd]
     pixDets = np.linalg.det(pixCovars)
     pixCovars = pixCovars.reshape(unkInd.shape[0], 1, 3, 3)
-    
+
     nMeans = meanImage[fgNeigh] - pixMeans.reshape(unkInd.shape[0], 1, 3)
     nCovars = covariance[fgNeigh]
     nDets = np.linalg.det(nCovars)
-    nCovars = (pixCovars + nCovars)/2
-    
-    fgBhatt = 0.125*mul_vec_mat_vec(nMeans, np.linalg.inv(nCovars), nMeans) \
-        + 0.5*np.log(np.linalg.det(nCovars) / np.sqrt(pixDets[:, None] * nDets))
-    
+    nCovars = (pixCovars + nCovars) / 2
+
+    fgBhatt = 0.125 * mul_vec_mat_vec(nMeans, np.linalg.inv(nCovars), nMeans) \
+        + 0.5 * np.log(np.linalg.det(nCovars) / np.sqrt(pixDets[:, None] * nDets))
+
     nMeans = meanImage[bgNeigh] - pixMeans.reshape(unkInd.shape[0], 1, 3)
     nCovars = covariance[bgNeigh]
     nDets = np.linalg.det(nCovars)
-    nCovars = (pixCovars + nCovars)/2
-    
-    bgBhatt = 0.125*mul_vec_mat_vec(nMeans, np.linalg.inv(nCovars), nMeans) \
-        + 0.5*np.log(np.linalg.det(nCovars) / np.sqrt(pixDets[:, None] * nDets))
-    
+    nCovars = (pixCovars + nCovars) / 2
+
+    bgBhatt = 0.125 * mul_vec_mat_vec(nMeans, np.linalg.inv(nCovars), nMeans) \
+        + 0.5 * np.log(np.linalg.det(nCovars) / np.sqrt(pixDets[:, None] * nDets))
+
     shape = trimap.shape
-    
+
     minFGdist = np.min(fgBhatt, axis=1)
     minBGdist = np.min(bgBhatt, axis=1)
-    
+
     mask0 = np.logical_and(minBGdist < minDist, minFGdist > maxDist)
     mask1 = np.logical_and(minFGdist < minDist, minBGdist > maxDist)
-    
+
     trimap[np.unravel_index(unkInd[mask0], shape)] = 0
     trimap[np.unravel_index(unkInd[mask1], shape)] = 1
-    
+
     return trimap
+
 
 def knownToUnknownColorMixture(image, trimap, K, xyWeight):
     is_fg = trimap > 0.8
     is_bg = trimap < 0.2
     is_known = np.logical_or(is_fg, is_bg)
     is_unknown = np.logical_not(is_known)
-    
+
     # Find neighbors of unknown pixels in FG and BG
     inInd, bgInd, features = findNonlocalNeighbors(image, K, xyWeight, is_unknown, is_bg)
-    _,     fgInd,_         = findNonlocalNeighbors(image, K, xyWeight, is_unknown, is_fg)
-    
+    _, fgInd, _ = findNonlocalNeighbors(image, K, xyWeight, is_unknown, is_fg)
+
     neighInd = np.concatenate([fgInd, bgInd], axis=1)
-    
+
     # Compute LLE weights and estimate FG and BG colors that got into the mixture
     features = features[:, :-2]
     flows = np.zeros((inInd.shape[0], neighInd.shape[1]))
     fgCols = np.zeros((inInd.shape[0], 3))
     bgCols = np.zeros((inInd.shape[0], 3))
-    
+
     flows = solve_for_weights(features[inInd].reshape(-1, 1, 3) - features[neighInd], 1e-10)
-    
+
     fgCols = np.sum(features[neighInd[:, :K]] * flows[:, :K, np.newaxis], axis=1)
     bgCols = np.sum(features[neighInd[:, K:]] * flows[:, K:, np.newaxis], axis=1)
-    
+
     alphaEst = trimap.copy()
     alphaEst[is_unknown] = np.sum(flows[:, :K], axis=1)
-    
+
     # Compute the confidence based on FG - BG color difference
     confidence_of_unknown = np.sum(np.square(fgCols - bgCols), 1) / 3
-    
+
     conf = is_known.astype(np.float64)
     conf[is_unknown] = confidence_of_unknown
-    
+
     return alphaEst, conf
+
 
 def ifm_system(image, trimap):
     params = {
@@ -451,8 +470,8 @@ def ifm_system(image, trimap):
         "refinement_mult": 0.1,
     }
 
-    h,w = trimap.shape
-    n = h*w
+    h, w = trimap.shape
+    n = h * w
     is_fg = trimap > 0.8
     is_bg = trimap < 0.2
     is_known = np.logical_or(is_fg, is_bg)
@@ -460,7 +479,7 @@ def ifm_system(image, trimap):
 
     L = affinityMatrixToLaplacian(colorMixtureAffinities(image, params["cm_K"], is_unknown, None, params["cm_xyw"]))
 
-    L = params["cm_mult"]*L.T.dot(L)
+    L = params["cm_mult"] * L.T.dot(L)
 
     dilUnk = imdilate(is_unknown, params["loc_win"])
 
@@ -479,7 +498,7 @@ def ifm_system(image, trimap):
 
     d = is_known.flatten().astype(np.float64)
 
-    A = params["lambda"]*scipy.sparse.diags(d)
+    A = params["lambda"] * scipy.sparse.diags(d)
 
     kToUconf[is_known] = 0
 
@@ -488,5 +507,5 @@ def ifm_system(image, trimap):
     b = A.dot(kToU.flatten())
 
     A = A + L
-    
+
     return A, b

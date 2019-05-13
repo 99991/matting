@@ -384,23 +384,24 @@ from .knn import knn
 import numpy as np
 import scipy.sparse
 
+
 def knn_laplacian(image, normalize=False):
     # build knn laplacian from image using nearest neighbor information
-    h,w,depth = image.shape
-    n = h*w
+    h, w, depth = image.shape
+    n = h * w
     assert(depth == 3)
     # calculate pixel positions
     x = np.arange(1, w + 1)
     y = np.arange(1, h + 1)
-    x,y = np.meshgrid(x, y)
+    x, y = np.meshgrid(x, y)
     x = x.flatten()
     y = y.flatten()
 
     # calculate feature matrix from colors and pixel positions
     # distance scale factor
-    d = np.sqrt(w*w + h*h)/2
-    r,g,b = image.reshape(n, 3).T
-    features = np.stack([r,g,b,x/d,y/d], axis=1)
+    d = np.sqrt(w * w + h * h) / 2
+    r, g, b = image.reshape(n, 3).T
+    features = np.stack([r, g, b, x / d, y / d], axis=1)
     features = features.astype(np.float32)
 
     # empty list of nearest neighbor pairs
@@ -421,7 +422,7 @@ def knn_laplacian(image, normalize=False):
 
         # add new nearest neighbor pairs
         ij = np.concatenate([ij, more_ij], axis=0)
-        
+
         # decrease distance cost by scaling coordinates
         features[:, -2:] *= 0.01
 
@@ -436,7 +437,7 @@ def knn_laplacian(image, normalize=False):
 
     # build weight matrix
     W = scipy.sparse.coo_matrix((values, (i_inds, j_inds)), shape=(n, n))
-    
+
     W = W + W.T
-    
+
     return weights_to_laplacian(W, normalize=normalize)

@@ -4,6 +4,9 @@ from setuptools.command.install import install
 import shutil
 import sys
 
+# code style:
+# pycodestyle --ignore=E501 --first .
+
 compiler = "gcc"
 
 # If you want to compile with Visual Studio, find the location of
@@ -24,23 +27,26 @@ labelexpand.c
 flags = "-O3 -Wall -Wextra -pedantic -shared"
 
 compile_commands = {
-    "win32": "%s %s %s -o libmatting.dll"%(compiler, flags, src),
-    "linux": "%s %s %s -fPIC -lm -o libmatting.so"%(compiler, flags, src),
-    "darwin": "%s %s %s -fPIC -lm -o libmatting.so"%(compiler, flags, src),
+    "win32": "%s %s %s -o libmatting.dll" % (compiler, flags, src),
+    "linux": "%s %s %s -fPIC -lm -o libmatting.so" % (compiler, flags, src),
+    "darwin": "%s %s %s -fPIC -lm -o libmatting.so" % (compiler, flags, src),
 }
 
 # Additionally, uncomment the next line:
 if use_vcc:
-    compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s"%src
+    compile_commands["win32"] = "cl /LD /O2 /Felibmatting.dll %s" % src
+
 
 def load_text(path):
     with open(path) as f:
         return f.read()
 
+
 # load information about package
 path = os.path.join(os.path.dirname(__file__), "matting", "__about__.py")
 about = {}
 exec(load_text(path), about)
+
 
 def cleanup():
     print("cleanup")
@@ -50,26 +56,29 @@ def cleanup():
     ]:
         shutil.rmtree(directory, ignore_errors=True)
 
+
 class InstallLibmatting(install):
     def run(self):
         if sys.platform not in compile_commands:
-            raise Exception("%s platform not supported"%sys.platform)
-        
+            raise Exception("%s platform not supported" % sys.platform)
+
         compile_command = compile_commands[sys.platform]
-        
+
         print("building libmatting library")
         os.chdir("matting/c")
-        
+
         err = os.system(compile_command)
-        
+
         os.chdir("../..")
-        
+
         if err:
             print("ERROR: Failed to compile libmatting. Only vcycle method will be available.")
-        
+
         install.run(self)
-        
+
         cleanup()
+
+
 setup(
     name=about["__title__"],
     version=about["__version__"],
