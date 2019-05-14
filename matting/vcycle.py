@@ -35,13 +35,52 @@ def make_P(shape):
     return upsample, downsample
 
 
-def vcycle(A, b, shape, cache):
+def jacobi(A, A_diag, b, x, num_iter, omega):
+    if x is None:
+        if num_iter > 0:
+            x = omega * b / A_diag
+            num_iter -= 1
+        else:
+            x = np.zeros_like(b)
+
+    for _ in range(num_iter):
+        x = x + omega * (b - A @ x) / A_diag
+
+    return x
+
+
+def gauss_seidel(L, U, b, x, num_iter):
+    from .ichol import backsub_L_csc_inplace
+
+    if x is None:
+        if num_iter > 0:
+            x = b.copy()
+            backsub_L_csc_inplace(L, x)
+            num_iter -= 1
+        else:
+            x = np.zeros_like(b)
+
+    for _ in range(num_iter):
+        x = b - U @ x
+        backsub_L_csc_inplace(L, x)
+
+    return x
+
+
+def vcycle(
+    A,
+    b,
+    shape,
+    cache,
+    num_pre_iter=1,
+    num_post_iter=1,
+    omega=0.8,
+    smoothing="jacobi",
+):
     h, w = shape
     n = h * w
 
     omega = 0.8
-    num_pre_iter = 0
-    num_post_iter = 1
 
     if n <= 32:
         return scipy.sparse.linalg.spsolve(A, b)
@@ -53,17 +92,20 @@ def vcycle(A, b, shape, cache):
 
         A_diag = A.diagonal()
 
-        inv_A_diag = 1 / A_diag
+        L = scipy.sparse.tril(A).tocsc()
+        U = scipy.sparse.triu(A, 1)
 
-        cache[shape] = (upsample, downsample, coarse_A, A_diag, inv_A_diag)
+        cache[shape] = (upsample, downsample, coarse_A, A_diag, L, U)
     else:
-        upsample, downsample, coarse_A, A_diag, inv_A_diag = cache[shape]
+        upsample, downsample, coarse_A, A_diag, L, U = cache[shape]
 
-    # dampened jacobi iteration on x0 = 0
-    x = omega * inv_A_diag * b
-    # more dampened jacobi iterations on x
-    for _ in range(num_pre_iter):
-        x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega) * x
+    # smooth error
+    if smoothing == "jacobi":
+        x = jacobi(A, A_diag, b, None, num_pre_iter, omega)
+    elif smoothing == "gauss-seidel":
+        x = gauss_seidel(L, U, b, None, num_pre_iter)
+    else:
+        raise ValueError("Invalid smoothing method %s" % smoothing)
 
     # calculate residual error to perfect solution
     residual = b - A @ x
@@ -77,8 +119,12 @@ def vcycle(A, b, shape, cache):
     # apply coarse correction
     x += upsample @ coarse_x
 
-    # dampened jacobi iterations on x
-    for _ in range(num_post_iter):
-        x = omega * inv_A_diag * (b - A @ x + A_diag * x) + (1 - omega) * x
+    # smooth error
+    if smoothing == "jacobi":
+        x = jacobi(A, A_diag, b, x, num_post_iter, omega)
+    elif smoothing == "gauss-seidel":
+        x = gauss_seidel(L, U, b, x, num_post_iter)
+    else:
+        raise ValueError("Invalid smoothing method %s" % smoothing)
 
     return x

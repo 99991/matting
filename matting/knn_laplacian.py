@@ -385,7 +385,12 @@ import numpy as np
 import scipy.sparse
 
 
-def knn_laplacian(image, normalize=False):
+def knn_laplacian(
+    image,
+    normalize=False,
+    k_neighbors=[10, 2],
+    distance_decay_factor=0.01,
+):
     # build knn laplacian from image using nearest neighbor information
     h, w, depth = image.shape
     n = h * w
@@ -407,7 +412,7 @@ def knn_laplacian(image, normalize=False):
     # empty list of nearest neighbor pairs
     ij = np.zeros((0, 2), dtype=np.int64)
 
-    for n_neighbors in [10, 2]:
+    for n_neighbors in k_neighbors:
         # for each pixel
         a = np.repeat(np.arange(n), n_neighbors)
         # find nearest neighbor
@@ -424,7 +429,7 @@ def knn_laplacian(image, normalize=False):
         ij = np.concatenate([ij, more_ij], axis=0)
 
         # decrease distance cost by scaling coordinates
-        features[:, -2:] *= 0.01
+        features[:, -2:] *= distance_decay_factor
 
     # discard duplicate nearest neighbor pairs
     ij = np.unique(ij, axis=0)
