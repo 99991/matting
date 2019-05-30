@@ -100,7 +100,7 @@ def ichol_solve(L, b):
     return x
 
 
-def ichol(A, threshold):
+def ichol(A, threshold, discard_if_zero_in_A=False):
     if not isinstance(A, scipy.sparse.csc.csc_matrix):
         raise ValueError("Matrix A must be of type scipy.sparse.csc.csc_matrix")
 
@@ -120,7 +120,8 @@ def ichol(A, threshold):
         pointer(L_indices_ptr),
         pointer(L_indptr_ptr),
         n,
-        threshold)
+        threshold,
+        1 if discard_if_zero_in_A else 0)
 
     if err == -1:
         raise ValueError("ichol failed because matrix A was not positive definite enough for threshold")

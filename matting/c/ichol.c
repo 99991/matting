@@ -27,7 +27,8 @@ DLLEXPORT int ichol(
     int **L_indices_out,
     int **L_indptr_out,
     int n,
-    double threshold
+    double threshold,
+    int discard_if_zero_in_A
 ){
     int     L_nnz       = 0;
     int     L_max_nnz   = 0;
@@ -95,15 +96,25 @@ DLLEXPORT int ichol(
             
             // For each non-zero element in column k, starting at j
             for (int col_k_idx = col_k_start; col_k_idx < col_k_end; col_k_idx++){
-                int i = L_indices[col_k_idx];
-                double L_ik = L_data[col_k_idx];
-                col_j_data[i] -= L_ik*L_jk;
-                
-                // If row i in column j does not exist yet, create it
-                if (!col_j_used[i]){
-                    col_j_used[i] = 1;
-                    col_j_indices[col_j_nnz] = i;
-                    col_j_nnz++;
+                if (discard_if_zero_in_A){
+                    int i = L_indices[col_k_idx];
+                    
+                    // Discard update on L_ij if using sparsity pattern of A
+                    if (!col_j_used[i]) continue;
+                    
+                    double L_ik = L_data[col_k_idx];
+                    col_j_data[i] -= L_ik*L_jk;
+                }else{
+                    int i = L_indices[col_k_idx];
+                    double L_ik = L_data[col_k_idx];
+                    col_j_data[i] -= L_ik*L_jk;
+                    
+                    // If row i in column j does not exist yet, create it
+                    if (!col_j_used[i]){
+                        col_j_used[i] = 1;
+                        col_j_indices[col_j_nnz] = i;
+                        col_j_nnz++;
+                    }
                 }
             }
             
