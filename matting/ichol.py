@@ -25,7 +25,8 @@ _ichol.argtypes = [
     c_int_pp,
     c_int_pp,
     c_int,
-    c_double]
+    c_double,
+    c_int]
 
 _backsub_L_csc_inplace = library.backsub_L_csc_inplace
 _backsub_L_csc_inplace.argtypes = [
