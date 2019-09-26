@@ -44,7 +44,7 @@ def jacobi(A, A_diag, b, x, num_iter, omega):
             x = np.zeros_like(b)
 
     for _ in range(num_iter):
-        x = x + omega * (b - A @ x) / A_diag
+        x = x + omega * (b - A.dot(x)) / A_diag
 
     return x
 
@@ -61,7 +61,7 @@ def gauss_seidel(L, U, b, x, num_iter):
             x = np.zeros_like(b)
 
     for _ in range(num_iter):
-        x = b - U @ x
+        x = b - U.dot(x)
         backsub_L_csc_inplace(L, x)
 
     return x
@@ -88,7 +88,7 @@ def vcycle(
     if shape not in cache:
         upsample, downsample = make_P(shape)
 
-        coarse_A = downsample @ A @ upsample
+        coarse_A = downsample.dot(A).dot(upsample)
 
         A_diag = A.diagonal()
 
@@ -108,16 +108,16 @@ def vcycle(
         raise ValueError("Invalid smoothing method %s" % smoothing)
 
     # calculate residual error to perfect solution
-    residual = b - A @ x
+    residual = b - A.dot(x)
 
     # downsample residual error
-    coarse_residual = downsample @ residual
+    coarse_residual = downsample.dot(residual)
 
     # calculate coarse solution for residual
     coarse_x = vcycle(coarse_A, coarse_residual, (h // 2, w // 2), cache)
 
     # apply coarse correction
-    x += upsample @ coarse_x
+    x += upsample.dot(coarse_x)
 
     # smooth error
     if smoothing == "jacobi":

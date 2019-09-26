@@ -63,14 +63,14 @@ def estimate_fb_cf(
         for dx, dy in neighbors]
 
     S = sum(
-        D.T @ scipy.sparse.diags(regularization + np.abs(D @ a)) @ D
+        D.T.dot(scipy.sparse.diags(regularization + np.abs(D.dot(a)))).dot(D)
         for D in Ds)
 
     V = scipy.sparse.bmat([
         [S, None],
         [None, S]])
 
-    A = (U.T @ U + V).tocsc()
+    A = (U.T.dot(U) + V).tocsc()
 
     if print_info:
         print("computing incomplete Cholesky decomposition")
@@ -95,7 +95,7 @@ def estimate_fb_cf(
 
         image_channel = image[:, :, channel].flatten()
 
-        b = U.T @ image_channel
+        b = U.T.dot(image_channel)
 
         # Solve large sparse linear equation system
         fb = solve_cg(A, b, precondition=precondition, max_iter=max_iter, atol=atol, rtol=rtol, print_info=print_info)

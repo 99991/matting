@@ -197,7 +197,7 @@ def alpha_matting(
         inv_A_diag = 1 / (L_diag + d)
 
         def A_dot(x):
-            return L @ x + d * x
+            return L.dot(x) + d * x
 
         n = len(d)
 
