@@ -12,8 +12,8 @@ def estimate_fb_cf(
     regularization=1e-5,
     neighbors=[(-1, 0), (1, 0), (0, -1), (0, 1)],
     max_iter=1000,
-    atol=1e-6,
-    rtol=0.0,
+    atol=0.0,
+    rtol=1e-5,
     print_info=False,
 ):
     """
@@ -115,7 +115,7 @@ def estimate_fb_ml(
     min_size=2,
     growth_factor=2,
     regularization=1e-5,
-    n_iter_func=lambda w, h: 5 if max(w, h) <= 64 else 1,
+    n_iter_func=2,
     print_info=False,
 ):
     """
@@ -146,6 +146,10 @@ def estimate_fb_ml(
     B: np.ndarray of dtype np.float64
         Background image.
     """
+    
+    if not callable(n_iter_func):
+        value = n_iter_func
+        n_iter_func = lambda w, h: value
 
     assert(min_size >= 1)
     assert(growth_factor > 1.0)
