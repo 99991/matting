@@ -1,9 +1,12 @@
 from .util import solve_cg, vec_vec_outer, pixel_coordinates, inv2
 from .util import resize_nearest, sparse_conv_matrix
-from .ichol import ichol, ichol_solve
 import numpy as np
 import scipy.sparse
 
+try:
+    from .ichol import ichol, ichol_solve
+except Exception as e:
+    pass
 
 def estimate_fb_cf(
     image,

@@ -24,7 +24,7 @@ labelexpand.c
 
 """.replace("\n", " ")
 
-flags = "-O3 -Wall -Wextra -pedantic -shared"
+flags = "-O3 -Wall -Wextra -pedantic -shared -std=c99"
 
 compile_commands = {
     "win32": "%s %s %s -o libmatting.dll" % (compiler, flags, src),

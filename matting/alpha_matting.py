@@ -1,12 +1,17 @@
 from .util import make_system, solve_cg
 from .closed_form_laplacian import closed_form_laplacian
-from .knn_laplacian import knn_laplacian
-from .ichol import ichol, ichol_solve
-from .lkm import make_lkm_operators
-from .ifm_matting import ifm_system
 from .vcycle import vcycle
 import numpy as np
 import scipy.sparse.linalg
+
+try:
+    from .knn_laplacian import knn_laplacian
+    from .lkm import make_lkm_operators
+    from .ichol import ichol, ichol_solve
+    from .ifm_matting import ifm_system
+except Exception as e:
+    print("Could not load share dlibrary.")
+    print("Therefore, ichol, knn-, lkm- and ifm-matting are not available.")
 
 METHODS = ["cf", "knn", "lkm", "ifm"]
 
